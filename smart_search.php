@@ -373,7 +373,7 @@ if (isset($_GET['analysis_id']) && $myId) {
   <link rel="stylesheet" href="css/public-site.css">
   <style>
     :root { --primary: #2563eb; --secondary: #3b82f6; --accent: #60a5fa; --gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);}    
-    body { padding-top: 35px; background: #f8f9fa; font-family: 'Inter', sans-serif; }
+    body { padding-top: 0 !important; background: #f4f8fc; font-family: 'Inter', sans-serif; }
     .navbar { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);}    
     .nav-link { position: relative; padding: 0.5rem 1rem !important; color: #495057 !important; }
     .nav-link.active { color: var(--primary) !important; }
@@ -381,7 +381,69 @@ if (isset($_GET['analysis_id']) && $myId) {
     .nav-link:hover .nav-link-border, .nav-link.active .nav-link-border { width: 100%; }
     nav.navbar,
     footer.bg-light.border-top.py-4.mt-5 { display:none; }
-    main.container.py-5 { max-width:1160px; padding-top:34px !important; }
+    main.container.py-5 {
+      max-width: 1160px;
+      padding-top: 34px !important;
+      padding-bottom: 72px !important;
+    }
+    h1.mb-4.fw-bold {
+      margin-bottom: 22px !important;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      letter-spacing: -0.04em;
+      color: #14213d;
+    }
+    .card {
+      border: 1px solid rgba(216,226,238,0.9);
+      border-radius: 24px;
+      box-shadow: 0 14px 40px rgba(18,38,63,0.08);
+      overflow: hidden;
+    }
+    .card-body { padding: 24px; }
+    .alert {
+      border-radius: 18px;
+      border: 1px solid rgba(216,226,238,0.85);
+      box-shadow: 0 10px 24px rgba(18,38,63,0.05);
+    }
+    .btn {
+      border-radius: 14px;
+      font-weight: 700;
+      padding: 12px 18px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #1d4ed8 0%, #163da8 100%);
+      border-color: #1d4ed8;
+      box-shadow: 0 10px 24px rgba(29,78,216,0.18);
+    }
+    .form-control,
+    .input-group-text {
+      min-height: 52px;
+      border-radius: 14px !important;
+      border-color: #d8e2ee;
+    }
+    .input-group > .form-control,
+    .input-group > .input-group-text { margin-right: 8px; }
+    .input-group > .form-control:last-child { margin-right: 0; }
+    .text-muted,
+    .form-text,
+    .small { color: #5b6577 !important; }
+    .border.rounded.p-3 {
+      border-radius: 20px !important;
+      border-color: #d8e2ee !important;
+      background: #f8fbff;
+    }
+    @media (max-width: 768px) {
+      main.container.py-5 { padding-top: 22px !important; }
+      .card-body { padding: 18px; }
+      .input-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .input-group > .form-control,
+      .input-group > .input-group-text {
+        margin-right: 0;
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
