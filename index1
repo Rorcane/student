@@ -1,0 +1,99 @@
+<?php
+require_once 'config.php';
+
+// Получаем фильтры из GET-запроса
+$title_filter = isset($_GET['title']) ? trim($_GET['title']) : '';
+$company_filter = isset($_GET['company']) ? trim($_GET['company']) : '';
+$category_filter = isset($_GET['category']) ? trim($_GET['category']) : '';
+
+// Категории (можно получать из базы, но пока вручную)
+$categories = ['Все категории', 'Продажи', 'Маркетинг', 'IT', 'Логистика', 'Поддержка', 'Технологии', 'Другое'];
+
+// Строим SQL-запрос с параметрами
+$sql = "SELECT * FROM vacancies WHERE 1=1";
+$params = [];
+
+if ($title_filter !== '') {
+    $sql .= " AND title LIKE :title";
+    $params[':title'] = "%" . $title_filter . "%";
+}
+if ($company_filter !== '') {
+    $sql .= " AND company LIKE :company";
+    $params[':company'] = "%" . $company_filter . "%";
+}
+if ($category_filter !== '' && $category_filter !== 'Все категории') {
+    $sql .= " AND category = :category";
+    $params[':category'] = $category_filter;
+}
+
+$sql .= " ORDER BY created_at DESC";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruWork</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="css/Style.css" />
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="aidrive.php">
+        <img src="img/logo.png" alt="AI-drive" width="30" height="30" class="me-2" />
+        TruWork
+      </a>
+      <?php if (isset($_COOKIE['user'])) {
+        echo '<a href="profile.php" class="text-decoration-none">' . htmlspecialchars($_COOKIE['user']) . '</a>';
+      } else {
+        echo '<a href="login.html" class="btn btn-primary">Войти</a>';
+      } ?>
+    </div>
+  </nav>
+
+  <main class="container py-5">
+    <h1 class="mb-4 fw-bold">Поиск вакансий</h1>
+
+    <!-- Форма фильтрации -->
+    <form method="get" class="row g-3 mb-4">
+      <div class="col-md-3">
+        <input type="text" name="title" class="form-control" placeholder="Название должности" value="<?php echo htmlspecialchars($title_filter); ?>">
+      </div>
+      <div class="col-md-3">
+        <input type="text" name="company" class="form-control" placeholder="Компания" value="<?php echo htmlspecialchars($company_filter); ?>">
+      </div>
+      <div class="col-md-3">
+        <select name="category" class="form-select">
+          <?php foreach ($categories as $cat): ?>
+            <option value="<?php echo $cat; ?>" <?php if ($category_filter === $cat) echo 'selected'; ?>>
+              <?php echo $cat; ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Применить фильтр</button>
+      </div>
+    </form>
+
+    <p class="text-muted">Найдено <?php echo count($vacancies); ?> вакансий</p>
+
+    <!-- Список вакансий -->
+    <?php if ($vacancies): ?>
+      <?php foreach ($vacancies as $vacancy): ?>
+        <div class="p-3 mb-3 bg-light rounded">
+          <h5 class="fw-bold"><?php echo htmlspecialchars($vacancy['title']); ?></h5>
+          <p class="text-muted"><?php echo htmlspecialchars($vacancy['company']); ?> — <?php echo htmlspecialchars($vacancy['category']); ?></p>
+          <p><?php echo nl2br(htmlspecialchars($vacancy['description'])); ?></p>
+        </div>
+      <?php endforeach; ?>
+    <?php else: ?>
+      <p>Вакансий не найдено по заданным критериям.</p>
+    <?php endif; ?>
+  </main>
+</body>
+</html>

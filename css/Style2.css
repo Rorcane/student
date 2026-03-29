@@ -1,0 +1,293 @@
+/* =========================
+   БАЗОВЫЕ СБРОСЫ И ШРИФТЫ
+   ========================= */
+body {
+    padding-top: 76px; /* Фиксированный отступ под навбаром */
+}
+   html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f4f4; /* общий фон */
+    color: #333;
+  }
+  
+  /* Ссылки */
+  a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  a:hover {
+    color: #0d6efd; /* цвет ховера ссылок */
+  }
+  
+  /* =========================
+     КОНТЕЙНЕРЫ (Bootstrap)
+     ========================= */
+  
+  /* Если вы хотите, чтобы .container был фиксированной ширины и центрировался, 
+     оставьте этот блок. Если нужно растянуть на всю ширину, уберите max-width. */
+  
+  .container, .container-fluid {
+    max-width: 1200px;
+    margin: 0 auto;      /* центрируем контейнер */
+    padding-left: 1rem;  /* небольшие отступы слева и справа */
+    padding-right: 1rem;
+  }
+  
+  /* Если используете .row, сбросьте лишние отступы аккуратно (не ломая Bootstrap): */
+  .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  /* =========================
+     НАВИГАЦИОННАЯ ПАНЕЛЬ
+     ========================= */
+  
+  .navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    background-color: #fff;
+    padding: 0.75rem 1rem;
+  }
+  
+  .navbar .navbar-brand {
+    font-weight: 600;
+    width: 10px; /* Уменьшение ширины */
+    height: auto; /* Сохраняем пропорции изображения */
+  }
+  
+  .navbar .nav-link {
+    margin: 0 0.5rem;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .navbar .nav-link:hover {
+    background-color: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  /* Ссылки на профиль/войти справа */
+  .navbar a.text-decoration-none {
+    font-weight: 500;
+    color: #333;
+    margin-left: 1rem;
+  }
+  
+  /* =========================
+     БОКОВАЯ ПАНЕЛЬ (SIDEBAR)
+     ========================= */
+  
+  .sidebar {
+    background: linear-gradient(180deg, #f8f9fa, #e9ecef); /* лёгкий градиент */
+    min-height: 100vh; /* тянется по высоте */
+    padding: 1rem;
+    box-shadow: inset -1px 0 1px rgba(0,0,0,0.05);
+  }
+  
+  .sidebar .nav-link {
+    color: #333;
+    background-color: #fff;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  .sidebar .nav-link:hover {
+    background-color: #e2e2e2;
+    border-color: #ccc;
+  }
+  .sidebar .nav-link.active {
+    background-color: #0d6efd;
+    color: #fff !important;
+    border-color: #0d6efd;
+  }
+  
+  /* =========================
+     ПРАВАЯ КОЛОНКА (RIGHT-COLUMN)
+     ========================= */
+  
+  .right-column {
+    background-color: #fdfdfd;
+    padding: 1rem;
+    border-left: 1px solid #ddd;
+    min-height: 100vh;
+    box-shadow: inset 1px 0 1px rgba(0,0,0,0.05);
+  }
+  .right-column h5,
+  .right-column h6 {
+    font-weight: 600;
+  }
+  
+  /* =========================
+     КАРТОЧКИ (HOVER-ЭФФЕКТ)
+     ========================= */
+  
+  .bg-light.rounded,
+  .card-custom {
+    background-color: #fff !important;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .bg-light.rounded:hover,
+  .card-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  }
+  .form-container {
+    animation: fadeIn 0.5s ease;
+}
+  /* Заголовки в карточках чуть выразительнее */
+  .bg-light.rounded h5,
+  .card-custom h5 {
+    font-weight: 600;
+  }
+  
+  /* =========================
+     КНОПКИ
+     ========================= */
+  
+  .btn {
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 4px;
+  }
+  .btn:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+  }
+  
+  /* =========================
+     ФОРМЫ
+     ========================= */
+  
+  .form-control {
+    border-radius: 4px;
+    box-shadow: none;
+    transition: border-color 0.2s ease;
+  }
+  .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15); /* эффект при фокусе */
+  }
+  
+  /* =========================
+     ТАБЛИЦЫ
+     ========================= */
+  
+  .table thead th {
+    background-color: #f1f1f1;
+    border-bottom: 2px solid #ddd;
+  }
+  .table tbody tr:hover {
+    background-color: #fafafa;
+  }
+  
+  /* =========================
+     ФУТЕР
+     ========================= */
+  
+  footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+    padding: 1rem 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 2rem;
+  }
+/* Добавить в общие стили */
+.dropdown-menu {
+  z-index: 1050 !important; /* Важно для отображения поверх других элементов */
+  min-width: 200px;
+}
+
+.profile-section {
+  position: relative;
+}
+
+/* Анимация выпадающего меню */
+.dropdown-menu {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+  /* Выпадающее меню */
+.dropdown-menu {
+  z-index: 9999;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f8f9fa;
+  padding-left: 1.5rem;
+}
+
+/* Иконки */
+.fa-user-circle {
+  color: #2A73CC;
+}
+
+
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .input-group {
+    width: 200px !important;
+  }
+}
+html {
+  /* всегда резервирует место под вертикальный скроллбар */
+  overflow-y: scroll;
+  /* для современных браузеров: */
+  /* scrollbar-gutter: stable; */
+}
+:root {
+    --primary: #2a73cc;
+    --primary-hover: #1f5aa3;
+    --gradient: linear-gradient(135deg, #2a73cc 0%, #2ac3cc 100%);
+}
+
+.btn-primary {
+    background: var(--gradient);
+    border: none;
+    transition: transform 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+}
+.hero-section {
+  /* Путь к вашей картинке: */
+  background: linear-gradient(
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0.5)
+    ),
+    url('httpdocs/img/hero-bg.jpg') center/cover no-repeat;
+  height: 75vh;            /* или любая другая высота */
+  min-height: 500px;       /* гарантированная минимальная высота */
+}
+
+/* Если у вас есть текстовый градиент */
+.text-gradient {
+  background: linear-gradient(90deg, #2a73cc, #4facfe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+

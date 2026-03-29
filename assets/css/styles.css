@@ -1,0 +1,171 @@
+/* styles.css — общий стиль для всего сайта */
+
+/* ---------- 1. Variables (цвета, отступы, точки перелома) ---------- */
+:root{
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --color-bg: #ffffff;
+  --color-card: #fbfbfd;
+  --color-primary: #1258d6;      /* основной */
+  --color-primary-600: #0f4fc2;
+  --color-accent: #00b894;
+  --color-muted: #6b7280;
+  --color-text: #0f1724;
+  --color-border: #e6e9ef;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.04);
+  --shadow-md: 0 6px 18px rgba(16,24,40,0.08);
+  --container-max: 1100px;
+
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 20px;
+  --space-lg: 32px;
+
+  --transition-fast: 180ms ease;
+}
+
+/* ---------- 2. Reset / base ---------- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font-sans);
+  font-size:16px;
+  line-height:1.45;
+  color:var(--color-text);
+  background:var(--color-bg);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* sensible reset for lists, links, images */
+img{max-width:100%;height:auto;display:block}
+a{color:var(--color-primary);text-decoration:none;transition:color var(--transition-fast)}
+a:hover{color:var(--color-primary-600)}
+ul{margin:0;padding:0;list-style:none}
+
+/* ---------- 3. Layout helpers ---------- */
+.container{
+  width:100%;
+  max-width:var(--container-max);
+  margin:0 auto;
+  padding:0 var(--space-md);
+}
+.row{display:flex;flex-wrap:wrap;margin:calc(-1 * var(--space-sm));}
+.col{padding:var(--space-sm);flex:1 1 0}
+
+/* responsive columns */
+.col-1{flex:0 0 8.3333%}
+.col-2{flex:0 0 16.6667%}
+.col-3{flex:0 0 25%}
+.col-4{flex:0 0 33.3333%}
+.col-6{flex:0 0 50%}
+.col-12{flex:0 0 100%}
+
+/* ---------- 4. Header / nav ---------- */
+.header{
+  background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.6));
+  border-bottom:1px solid var(--color-border);
+  position:sticky;top:0;z-index:30;
+  backdrop-filter: blur(6px);
+}
+.header .wrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--space-md);
+  padding:12px 0;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;
+}
+.brand img{height:38px;width:auto;border-radius:8px}
+.nav{
+  display:flex;gap:12px;align-items:center;
+}
+.nav a{padding:8px 12px;border-radius:8px;font-weight:500;color:var(--color-text)}
+.nav a.cta{
+  background:var(--color-primary);color:#fff;box-shadow:var(--shadow-sm);
+}
+.nav a:hover{background:rgba(18,88,214,0.06)}
+
+/* hamburger for small screens */
+.hamburger{display:none;padding:6px;border-radius:8px}
+@media (max-width:860px){
+  .nav{display:none}
+  .hamburger{display:inline-flex}
+}
+
+/* ---------- 5. Hero / page header ---------- */
+.page-hero{padding:36px 0 24px}
+.page-hero h1{margin:0;font-size:28px}
+.page-hero p{color:var(--color-muted);margin-top:8px}
+
+/* ---------- 6. Card component ---------- */
+.card{
+  background:var(--color-card);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:var(--space-md);
+}
+.card.large{padding:var(--space-lg)}
+
+/* ---------- 7. Buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:10px;border:0;
+  font-weight:600;cursor:pointer;transition:transform var(--transition-fast), box-shadow var(--transition-fast);
+  background:transparent;color:var(--color-primary);
+}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--color-primary);color:#fff;box-shadow:var(--shadow-sm)}
+.btn.ghost{background:transparent;border:1px solid var(--color-border);color:var(--color-text)}
+
+/* ---------- 8. Forms ---------- */
+.input, textarea, select{
+  width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);
+  background:white;font-size:15px;outline:none;transition:border var(--transition-fast), box-shadow var(--transition-fast);
+}
+.input:focus, textarea:focus, select:focus{border-color:var(--color-primary);box-shadow:0 4px 18px rgba(18,88,214,0.06)}
+label{display:block;font-weight:600;margin-bottom:6px;color:var(--color-muted)}
+
+/* ---------- 9. Lists, vacancy/item card (список вакансий) ---------- */
+.list{
+  display:grid;gap:12px;
+}
+.vacancy{
+  display:flex;gap:12px;align-items:center;padding:14px;border-radius:10px;border:1px solid var(--color-border);
+  background:white;
+}
+.vacancy .meta{flex:1}
+.vacancy h3{margin:0;font-size:16px}
+.vacancy p{margin:6px 0;color:var(--color-muted)}
+
+/* ---------- 10. Footer ---------- */
+.footer{
+  margin-top:var(--space-lg);
+  padding:var(--space-lg) 0;border-top:1px solid var(--color-border);
+  color:var(--color-muted);
+}
+.footer .cols{display:flex;gap:24px;flex-wrap:wrap}
+
+/* ---------- 11. Utilities ---------- */
+.text-muted{color:var(--color-muted)}
+.kicker{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--color-muted)}
+.center{text-align:center}
+.mt-sm{margin-top:8px}
+.mt-md{margin-top:20px}
+
+/* ---------- 12. Responsive tweaks ---------- */
+@media (max-width:1100px){
+  :root{--container-max:940px}
+}
+@media (max-width:760px){
+  :root{--container-max:680px}
+  .row{flex-direction:column}
+  .col{padding:8px 0}
+  .vacancy{flex-direction:column;align-items:flex-start}
+  .header .wrap{padding:10px 0}
+}

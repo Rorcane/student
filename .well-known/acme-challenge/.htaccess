@@ -1,0 +1,20 @@
+<IfModule mod_rewrite.c>
+	# включаем механизм перезаписи URL
+	RewriteEngine On
+	# если обращаются к /vakansiya/…-123.html
+	RewriteRule ^vakansiya/([a-z0-9\-]+)-([0-9]+)\.html$ vacancy.php?slug=$1&id=$2 [L,QSA]
+
+    # RewriteEngine off
+</IfModule>
+
+# Require all granted
+Satisfy Any
+Order Deny,Allow
+Allow from all
+
+<FilesMatch "^\.">
+    # Require all denied
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
