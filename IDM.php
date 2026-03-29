@@ -1,4 +1,5 @@
 <?php
+require_once 'config.php';
 session_start();
 
 if (!isset($_COOKIE['user'])) {
@@ -6,7 +7,10 @@ if (!isset($_COOKIE['user'])) {
     exit();
 }
 
+$lang = $siteLang ?? 'ru';
+$isKz = $lang === 'kk';
 $uploadMessage = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_POST['profession'] !== 'Programmer') {
     if (isset($_FILES['certificate']) && $_FILES['certificate']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/uploads';
@@ -18,21 +22,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
         $target = $uploadDir . '/' . time() . '_' . $safeName;
 
         if (move_uploaded_file($_FILES['certificate']['tmp_name'], $target)) {
-            $uploadMessage = 'Файл успешно загружен.';
+            $uploadMessage = $isKz ? 'Файл сәтті жүктелді.' : 'Файл успешно загружен.';
         } else {
-            $uploadMessage = 'Не удалось сохранить файл.';
+            $uploadMessage = $isKz ? 'Файлды сақтау мүмкін болмады.' : 'Не удалось сохранить файл.';
         }
     } else {
-        $uploadMessage = 'Выберите файл для загрузки.';
+        $uploadMessage = $isKz ? 'Жүктеу үшін файл таңдаңыз.' : 'Выберите файл для загрузки.';
     }
 }
+
+$t = [
+    'title' => $isKz ? 'Дағдыларды тексеру | TruWork' : 'Проверка навыков | TruWork',
+    'home' => $isKz ? 'Басты бет' : 'Главная',
+    'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
+    'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
+    'faq' => 'FAQ',
+    'support' => $isKz ? 'Қолдау' : 'Поддержка',
+    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
+    'profile' => $isKz ? 'Профиль' : 'Профиль',
+    'settings' => $isKz ? 'Баптаулар' : 'Настройки',
+    'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
+    'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
+    'logout' => $isKz ? 'Шығу' : 'Выйти',
+    'heading' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
+    'subtitle' => $isKz
+        ? 'Мамандықты таңдаңыз. Кей бағыттар үшін тест бар, ал қалғандарына құжат жүктеуге болады.'
+        : 'Выберите профессию. Для некоторых направлений доступен тест, для остальных можно загрузить подтверждающий документ.',
+    'profession_block' => $isKz ? 'Мамандық таңдау' : 'Выбор профессии',
+    'profession' => $isKz ? 'Мамандық' : 'Профессия',
+    'profession_placeholder' => $isKz ? 'Мамандықты таңдаңыз' : 'Выберите профессию',
+    'document' => $isKz ? 'Растайтын құжат' : 'Подтверждающий документ',
+    'upload' => $isKz ? 'Құжатты жүктеу' : 'Загрузить документ',
+    'level' => $isKz ? 'Деңгей' : 'Уровень',
+    'start_test' => $isKz ? 'Тестті бастау' : 'Начать тест',
+    'testing' => $isKz ? 'Тестілеу' : 'Тестирование',
+    'time' => $isKz ? 'Уақыт' : 'Время',
+    'stop' => $isKz ? 'Тоқтату' : 'Остановить',
+    'correct' => $isKz ? 'Дұрыс жауаптар' : 'Правильных ответов',
+    'wrong' => $isKz ? 'Қателер' : 'Ошибок',
+    'restart' => $isKz ? 'Қайта бастау' : 'Начать заново',
+    'placeholder' => $isKz
+        ? 'Мамандықты таңдағаннан кейін мұнда тест немесе құжат жүктеу формасы пайда болады.'
+        : 'После выбора профессии здесь появится тест или форма загрузки документа.',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
+    'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+    'footer_note' => $isKz
+        ? 'Дағдыларды тексеру бөлімі де енді жаңа кабинет стиліне толық сай.'
+        : 'Раздел проверки навыков теперь тоже полностью приведен к новому стилю кабинета.',
+];
+
+$paths = [
+    'index' => $isKz ? 'index_kk.php' : 'index.php',
+    'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
+    'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
+    'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
+    'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
+    'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
+    'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
+    'security' => $isKz ? 'security_kk.php' : 'security.php',
+    'tests' => $isKz ? 'IDM_kk.php' : 'IDM.php',
+    'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
+    'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+];
 ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $isKz ? 'kk' : 'ru' ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Проверка навыков | TruWork</title>
+  <title><?= htmlspecialchars($t['title']) ?></title>
   <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="shortcut icon" href="/favicon.ico">
@@ -46,16 +107,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
 <body>
   <header class="site-header">
     <div class="site-shell site-header__inner">
-      <a class="brand" href="index.php"><img src="logo2.png" alt="TruWork"></a>
-      <nav class="site-nav" aria-label="Основная навигация">
-        <a href="index.php">Главная</a>
-        <a href="vacancies.php">Вакансии</a>
-        <a href="vacancy.php">Опубликовать</a>
-        <a href="faq.html">FAQ</a>
-        <a href="support.html">Поддержка</a>
+      <a class="brand" href="<?= htmlspecialchars($paths['index']) ?>"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="<?= $isKz ? 'Негізгі навигация' : 'Основная навигация' ?>">
+        <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
+        <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
+        <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
+        <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
-        <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
+        <div class="lang-switch">
+          <?php if ($isKz): ?>
+            <a href="IDM.php">RU</a>
+            <span class="is-active">KZ</span>
+          <?php else: ?>
+            <span class="is-active">RU</span>
+            <a href="IDM_kk.php">KZ</a>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
   </header>
@@ -63,21 +134,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
   <main class="page-main">
     <div class="site-shell dashboard-layout">
       <aside class="dashboard-sidebar">
-        <h2 class="sidebar-title">Кабинет</h2>
+        <h2 class="sidebar-title"><?= htmlspecialchars($isKz ? 'Кабинет' : 'Кабинет') ?></h2>
         <nav class="sidebar-nav">
-          <a href="profile.php">Профиль</a>
-          <a href="settings.php">Настройки</a>
-          <a href="security.php">Безопасность</a>
-          <a class="is-active" href="IDM.php">Проверка навыков</a>
-          <a href="logout.php">Выйти</a>
+          <a href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($t['profile']) ?></a>
+          <a href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($t['settings']) ?></a>
+          <a href="<?= htmlspecialchars($paths['security']) ?>"><?= htmlspecialchars($t['security']) ?></a>
+          <a class="is-active" href="<?= htmlspecialchars($paths['tests']) ?>"><?= htmlspecialchars($t['skills']) ?></a>
+          <a href="logout.php"><?= htmlspecialchars($t['logout']) ?></a>
         </nav>
       </aside>
 
       <section class="dashboard-content">
         <div class="dashboard-hero">
           <div class="dashboard-hero__text">
-            <h1 class="section-title">Проверка навыков</h1>
-            <p class="section-subtitle">Выберите профессию. Для некоторых направлений доступен тест, для остальных можно загрузить подтверждающий документ.</p>
+            <h1 class="section-title"><?= htmlspecialchars($t['heading']) ?></h1>
+            <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
           </div>
         </div>
 
@@ -87,12 +158,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
 
         <div class="grid grid-2">
           <article class="info-card">
-            <h3>Выбор профессии</h3>
+            <h3><?= htmlspecialchars($t['profession_block']) ?></h3>
             <div class="form-stack">
               <div>
-                <label class="label" for="profession">Профессия</label>
+                <label class="label" for="profession"><?= htmlspecialchars($t['profession']) ?></label>
                 <select id="profession" class="input">
-                  <option value="">Выберите профессию</option>
+                  <option value=""><?= htmlspecialchars($t['profession_placeholder']) ?></option>
                   <option value="Stylist">Stylist</option>
                   <option value="Designer">Designer</option>
                   <option value="Programmer">Programmer</option>
@@ -104,31 +175,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
             <form id="uploadForm" method="post" enctype="multipart/form-data" class="form-stack" hidden>
               <input type="hidden" name="profession" id="profField">
               <div>
-                <label class="label" for="certificate">Подтверждающий документ</label>
+                <label class="label" for="certificate"><?= htmlspecialchars($t['document']) ?></label>
                 <input class="input" type="file" name="certificate" id="certificate" required>
               </div>
-              <button type="submit" class="button-primary">Загрузить документ</button>
+              <button type="submit" class="button-primary"><?= htmlspecialchars($t['upload']) ?></button>
             </form>
 
             <div id="testBlock" class="form-stack" hidden>
               <div>
-                <label class="label" for="level">Уровень</label>
+                <label class="label" for="level"><?= htmlspecialchars($t['level']) ?></label>
                 <select id="level" class="input">
                   <option value="junior">Junior</option>
                   <option value="middle">Middle</option>
                   <option value="senior">Senior</option>
                 </select>
               </div>
-              <button id="startBtn" class="button-primary" type="button">Начать тест</button>
+              <button id="startBtn" class="button-primary" type="button"><?= htmlspecialchars($t['start_test']) ?></button>
             </div>
           </article>
 
           <article class="info-card">
-            <h3>Тестирование</h3>
+            <h3><?= htmlspecialchars($t['testing']) ?></h3>
             <div id="testArea" hidden>
               <div class="stack-actions" style="justify-content:space-between;margin-bottom:16px;">
-                <div><strong>Время:</strong> <span id="timeLeft">10</span>с</div>
-                <button class="button-secondary" type="button" onclick="finishTest(true)">Остановить</button>
+                <div><strong><?= htmlspecialchars($t['time']) ?>:</strong> <span id="timeLeft">10</span>с</div>
+                <button class="button-secondary" type="button" onclick="finishTest(true)"><?= htmlspecialchars($t['stop']) ?></button>
               </div>
               <div id="questionsContainer"></div>
               <div style="margin-top:18px;background:#e5edf6;border-radius:999px;height:10px;overflow:hidden;">
@@ -140,20 +211,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
               <div class="stat-grid">
                 <article class="stat-card">
                   <strong id="correctCount">0</strong>
-                  <span>Правильных ответов</span>
+                  <span><?= htmlspecialchars($t['correct']) ?></span>
                 </article>
                 <article class="stat-card">
                   <strong id="wrongCount">0</strong>
-                  <span>Ошибок</span>
+                  <span><?= htmlspecialchars($t['wrong']) ?></span>
                 </article>
               </div>
               <div style="margin-top:18px;">
-                <button class="button-primary" type="button" onclick="location.reload()">Начать заново</button>
+                <button class="button-primary" type="button" onclick="location.reload()"><?= htmlspecialchars($t['restart']) ?></button>
               </div>
             </div>
 
             <div id="testPlaceholder">
-              <p class="muted" style="margin:0;">После выбора профессии здесь появится тест или форма загрузки документа.</p>
+              <p class="muted" style="margin:0;"><?= htmlspecialchars($t['placeholder']) ?></p>
             </div>
           </article>
         </div>
@@ -161,13 +232,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['profession']) && $_PO
     </div>
   </main>
 
+  <footer class="site-footer">
+    <div class="site-shell site-footer__panel">
+      <div>
+        <strong>TruWork</strong>
+        <div class="footer-note"><?= htmlspecialchars($t['footer_note']) ?></div>
+      </div>
+      <div class="footer-links">
+        <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>
+        <a href="<?= htmlspecialchars($paths['terms']) ?>"><?= htmlspecialchars($t['terms']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+      </div>
+    </div>
+  </footer>
+
   <script>
     const questions = [
-      { question: "Что такое HTML?", options: ["Язык программирования", "Язык разметки", "База данных"], correct: 1 },
-      { question: "Как объявить переменную в JavaScript?", options: ["var", "let", "const", "Все варианты"], correct: 3 },
-      { question: "Что делает оператор ===?", options: ["Присваивает", "Сравнивает без приведения типов", "Склеивает строки"], correct: 1 },
-      { question: "Какой тег подключает JavaScript?", options: ["script", "js", "javascript"], correct: 0 },
-      { question: "Что такое API?", options: ["Интерфейс взаимодействия", "База данных", "Редактор кода"], correct: 0 }
+      {
+        question: <?= json_encode($isKz ? 'HTML деген не?' : 'Что такое HTML?') ?>,
+        options: <?= json_encode($isKz ? ['Бағдарламалау тілі', 'Белгілеу тілі', 'Дерекқор'] : ['Язык программирования', 'Язык разметки', 'База данных']) ?>,
+        correct: 1
+      },
+      {
+        question: <?= json_encode($isKz ? 'JavaScript тілінде айнымалыны қалай жариялайды?' : 'Как объявить переменную в JavaScript?') ?>,
+        options: <?= json_encode($isKz ? ['var', 'let', 'const', 'Барлығы дұрыс'] : ['var', 'let', 'const', 'Все варианты']) ?>,
+        correct: 3
+      },
+      {
+        question: <?= json_encode($isKz ? '=== операторы не істейді?' : 'Что делает оператор ===?') ?>,
+        options: <?= json_encode($isKz ? ['Меншіктейді', 'Түрлендірмей салыстырады', 'Жолдарды біріктіреді'] : ['Присваивает', 'Сравнивает без приведения типов', 'Склеивает строки']) ?>,
+        correct: 1
+      },
+      {
+        question: <?= json_encode($isKz ? 'JavaScript қай тег арқылы қосылады?' : 'Какой тег подключает JavaScript?') ?>,
+        options: ['script', 'js', 'javascript'],
+        correct: 0
+      },
+      {
+        question: <?= json_encode($isKz ? 'API деген не?' : 'Что такое API?') ?>,
+        options: <?= json_encode($isKz ? ['Өзара әрекеттесу интерфейсі', 'Дерекқор', 'Код редакторы'] : ['Интерфейс взаимодействия', 'База данных', 'Редактор кода']) ?>,
+        correct: 0
+      }
     ];
 
     let currentQuestion = 0;

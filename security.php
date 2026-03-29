@@ -12,6 +12,18 @@ $currentUser = (string) $_COOKIE['user'];
 $notice = '';
 $error = '';
 
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS profile_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        viewer_username VARCHAR(255) NOT NULL,
+        viewed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_profile_views_username (username),
+        INDEX idx_profile_views_viewer (viewer_username),
+        INDEX idx_profile_views_viewed_at (viewed_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
 $userStmt = $pdo->prepare("SELECT username, password, email, created_at FROM users WHERE username = :username LIMIT 1");
 $userStmt->execute([':username' => $currentUser]);
 $user = $userStmt->fetch(PDO::FETCH_ASSOC);
@@ -72,41 +84,51 @@ $t = [
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
     'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
+    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
     'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
     'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
     'logout' => $isKz ? 'Шығу' : 'Выйти',
     'heading' => $isKz ? 'Қауіпсіздік баптаулары' : 'Настройки безопасности',
-    'subtitle' => $isKz ? 'Парольді өзгертіңіз және соңғы белсенділікті тексеріңіз.' : 'Измените пароль и проверьте недавнюю активность аккаунта.',
+    'subtitle' => $isKz
+        ? 'Парольді өзгертіп, соңғы белсенділікті тексеріңіз.'
+        : 'Измените пароль и проверьте недавнюю активность аккаунта.',
     'current_password' => $isKz ? 'Ағымдағы пароль' : 'Текущий пароль',
     'new_password' => $isKz ? 'Жаңа пароль' : 'Новый пароль',
     'confirm_password' => $isKz ? 'Парольді қайталау' : 'Повторите пароль',
     'save' => $isKz ? 'Парольді жаңарту' : 'Обновить пароль',
     'recent_activity' => $isKz ? 'Соңғы белсенділік' : 'Последняя активность',
-    'recent_activity_note' => $isKz ? 'Профильге соңғы кірген пайдаланушылар тізімі.' : 'Список последних пользователей, которые открывали профиль.',
+    'recent_activity_note' => $isKz
+        ? 'Профильге соңғы кірген пайдаланушылар тізімі.'
+        : 'Список последних пользователей, которые открывали профиль.',
     'empty_activity' => $isKz ? 'Әзірге белсенділік тіркелмеген.' : 'Пока активность не зафиксирована.',
     'email' => 'Email',
     'since' => $isKz ? 'Тіркелген күні' : 'Дата регистрации',
     'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
-    'footer_note' => $isKz ? 'Қауіпсіздік бөлімі енді кабинет стилімен бірдей.' : 'Раздел безопасности теперь полностью оформлен в стиле кабинета.',
+    'footer_note' => $isKz
+        ? 'Қауіпсіздік бөлімі енді кабинет стилімен бірдей.'
+        : 'Раздел безопасности теперь полностью оформлен в стиле кабинета.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
     'security' => $isKz ? 'security_kk.php' : 'security.php',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
-    'tests' => 'IDM.php',
+    'tests' => $isKz ? 'IDM_kk.php' : 'IDM.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -133,8 +155,10 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
         <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
@@ -155,11 +179,11 @@ $paths = [
       <aside class="dashboard-sidebar">
         <h2 class="sidebar-title"><?= htmlspecialchars($t['security']) ?></h2>
         <nav class="sidebar-nav">
-          <a href="<?= htmlspecialchars($paths['profile']) ?>"><span><?= htmlspecialchars($t['profile']) ?></span><span>01</span></a>
-          <a href="<?= htmlspecialchars($paths['settings']) ?>"><span><?= htmlspecialchars($t['settings']) ?></span><span>02</span></a>
-          <a class="is-active" href="<?= htmlspecialchars($paths['security']) ?>"><span><?= htmlspecialchars($t['security']) ?></span><span>03</span></a>
-          <a href="<?= htmlspecialchars($paths['tests']) ?>"><span><?= htmlspecialchars($t['skills']) ?></span><span>04</span></a>
-          <a href="logout.php"><span><?= htmlspecialchars($t['logout']) ?></span><span>05</span></a>
+          <a href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($t['profile']) ?></a>
+          <a href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($t['settings']) ?></a>
+          <a class="is-active" href="<?= htmlspecialchars($paths['security']) ?>"><?= htmlspecialchars($t['security']) ?></a>
+          <a href="<?= htmlspecialchars($paths['tests']) ?>"><?= htmlspecialchars($t['skills']) ?></a>
+          <a href="logout.php"><?= htmlspecialchars($t['logout']) ?></a>
         </nav>
       </aside>
 

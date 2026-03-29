@@ -82,39 +82,47 @@ $t = [
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
     'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
+    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
     'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
     'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
     'logout' => $isKz ? 'Шығу' : 'Выйти',
     'heading' => $isKz ? 'Аккаунт баптаулары' : 'Настройки аккаунта',
-    'subtitle' => $isKz ? 'Профиль деректерін жаңартыңыз. Бұл форма өзгерістерді бірден сақтайды.' : 'Обновите данные профиля. Эта форма сразу сохраняет актуальные контактные данные.',
+    'subtitle' => $isKz
+        ? 'Профиль деректерін жаңартыңыз. Бұл форма байланыс деректерін бірден сақтайды.'
+        : 'Обновите данные профиля. Эта форма сразу сохраняет актуальные контактные данные.',
     'saved' => $isKz ? 'Сақталды' : 'Сохранено',
     'fullname' => $isKz ? 'Толық аты' : 'Полное имя',
     'email' => 'Email',
     'phone' => $isKz ? 'Телефон' : 'Телефон',
-    'address' => $isKz ? 'Адрес' : 'Адрес',
+    'address' => $isKz ? 'Мекенжай' : 'Адрес',
     'bio' => $isKz ? 'Өзі туралы' : 'О себе',
     'save' => $isKz ? 'Сақтау' : 'Сохранить',
     'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
-    'footer_note' => $isKz ? 'Жеке баптаулар енді кабинет құрылымымен толық біріктірілген.' : 'Настройки теперь встроены в ту же структуру кабинета, что и профиль.',
+    'footer_note' => $isKz
+        ? 'Жеке баптаулар енді кабинет құрылымымен толық біріктірілген.'
+        : 'Настройки теперь встроены в ту же структуру кабинета, что и профиль.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
     'security' => $isKz ? 'security_kk.php' : 'security.php',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
-    'tests' => 'IDM.php',
+    'tests' => $isKz ? 'IDM_kk.php' : 'IDM.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -141,8 +149,10 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
         <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
@@ -163,11 +173,11 @@ $paths = [
       <aside class="dashboard-sidebar">
         <h2 class="sidebar-title"><?= htmlspecialchars($t['settings']) ?></h2>
         <nav class="sidebar-nav">
-          <a href="<?= htmlspecialchars($paths['profile']) ?>"><span><?= htmlspecialchars($t['profile']) ?></span><span>01</span></a>
-          <a class="is-active" href="<?= htmlspecialchars($paths['settings']) ?>"><span><?= htmlspecialchars($t['settings']) ?></span><span>02</span></a>
-          <a href="<?= htmlspecialchars($paths['security']) ?>"><span><?= htmlspecialchars($t['security']) ?></span><span>03</span></a>
-          <a href="<?= htmlspecialchars($paths['tests']) ?>"><span><?= htmlspecialchars($t['skills']) ?></span><span>04</span></a>
-          <a href="logout.php"><span><?= htmlspecialchars($t['logout']) ?></span><span>05</span></a>
+          <a href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($t['profile']) ?></a>
+          <a class="is-active" href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($t['settings']) ?></a>
+          <a href="<?= htmlspecialchars($paths['security']) ?>"><?= htmlspecialchars($t['security']) ?></a>
+          <a href="<?= htmlspecialchars($paths['tests']) ?>"><?= htmlspecialchars($t['skills']) ?></a>
+          <a href="logout.php"><?= htmlspecialchars($t['logout']) ?></a>
         </nav>
       </aside>
 

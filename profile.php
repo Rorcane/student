@@ -147,8 +147,10 @@ $t = [
     'title' => $isKz ? 'Профиль | TruWork' : 'Профиль | TruWork',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
-    'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'publish' => $isKz ? 'Жариялау' : 'Опубликовать', 
+    'about' => $isKz ? 'Р‘С–Р· С‚СѓСЂР°Р»С‹' : 'Рћ РЅР°СЃ',
     'faq' => 'FAQ',
+    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
@@ -181,14 +183,16 @@ $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
     'security' => $isKz ? 'security_kk.php' : 'security.php',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
-    'tests' => 'IDM.php',
+    'tests' => $isKz ? 'IDM_kk.php' : 'IDM.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -278,8 +282,10 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
         <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
