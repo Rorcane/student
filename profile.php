@@ -6,11 +6,33 @@ if (!isset($_COOKIE['user'])) {
     exit();
 }
 
+function ensure_user_profile_columns(PDO $pdo): void {
+    $columns = [];
+    $stmt = $pdo->query("SHOW COLUMNS FROM users");
+    foreach ($stmt as $row) {
+        $columns[$row['Field']] = true;
+    }
+
+    $required = [
+        'phone' => "ALTER TABLE users ADD COLUMN phone VARCHAR(255) NULL",
+        'address' => "ALTER TABLE users ADD COLUMN address VARCHAR(255) NULL",
+        'bio' => "ALTER TABLE users ADD COLUMN bio TEXT NULL",
+        'avatar' => "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL",
+    ];
+
+    foreach ($required as $name => $sql) {
+        if (!isset($columns[$name])) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 if (isset($_GET['user'])) {
     $username = $_GET['user'];
 } else {
     $username = $_COOKIE['user'];
 }
+ensure_user_profile_columns($pdo);
 $isOwner = ($_COOKIE['user'] === $username);
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS profile_views (
@@ -31,7 +53,7 @@ $deleteOldViews = $pdo->prepare("
 $deleteOldViews->execute();
 // Получаем данные пользователя из БД
 $stmt = $pdo->prepare("
-    SELECT username, full_name, email, phone, address, bio, avatar
+    SELECT username, fullname AS full_name, email, phone, address, bio, avatar
     FROM users
     WHERE username = :username
 ");

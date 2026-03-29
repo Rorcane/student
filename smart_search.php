@@ -370,6 +370,7 @@ if (isset($_GET['analysis_id']) && $myId) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/public-site.css">
   <style>
     :root { --primary: #2563eb; --secondary: #3b82f6; --accent: #60a5fa; --gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);}    
     body { padding-top: 35px; background: #f8f9fa; font-family: 'Inter', sans-serif; }
@@ -378,9 +379,31 @@ if (isset($_GET['analysis_id']) && $myId) {
     .nav-link.active { color: var(--primary) !important; }
     .nav-link-border { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--primary); transition: width 0.3s ease; }
     .nav-link:hover .nav-link-border, .nav-link.active .nav-link-border { width: 100%; }
+    nav.navbar,
+    footer.bg-light.border-top.py-4.mt-5 { display:none; }
+    main.container.py-5 { max-width:1160px; padding-top:34px !important; }
   </style>
 </head>
 <body>
+  <header class="site-header">
+    <div class="site-shell site-header__inner">
+      <a class="brand" href="index.php"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="Основная навигация">
+        <a href="index.php">Главная</a>
+        <a href="vacancies.php">Вакансии</a>
+        <a href="vacancy.php">Опубликовать</a>
+        <a href="support.html">Поддержка</a>
+        <a href="smart_search.php" class="is-active">Умный поиск</a>
+      </nav>
+      <div class="header-actions">
+        <?php if(isset($_COOKIE['user'])): ?>
+          <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
+        <?php else: ?>
+          <a class="button-primary" href="login.html">Войти</a>
+        <?php endif; ?>
+      </div>
+    </div>
+  </header>
   <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
     <div class="container">
       <a class="navbar-brand fw-bold d-flex align-items-center" href="index.php">
@@ -503,6 +526,20 @@ if (isset($_GET['analysis_id']) && $myId) {
 
   <footer class="bg-light border-top py-4 mt-5">
     <div class="container text-center text-muted">&copy; <?= date('Y') ?> TruWork. Все права защищены.</div>
+  </footer>
+
+  <footer class="site-footer">
+    <div class="site-shell site-footer__panel">
+      <div>
+        <strong>TruWork</strong>
+        <div class="footer-note">Умный поиск вакансий и история анализов в едином стиле.</div>
+      </div>
+      <div class="footer-links">
+        <a href="policy.html">Политика конфиденциальности</a>
+        <a href="terms.html">Условия использования</a>
+        <a href="support.html">Поддержка</a>
+      </div>
+    </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>

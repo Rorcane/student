@@ -2,6 +2,25 @@
 require_once 'config.php';
 if (!isset($_COOKIE['user'])) header('Location: login.html');
 
+$columns = [];
+$stmt = $pdo->query("SHOW COLUMNS FROM users");
+foreach ($stmt as $row) {
+    $columns[$row['Field']] = true;
+}
+
+$required = [
+    'phone' => "ALTER TABLE users ADD COLUMN phone VARCHAR(255) NULL",
+    'address' => "ALTER TABLE users ADD COLUMN address VARCHAR(255) NULL",
+    'bio' => "ALTER TABLE users ADD COLUMN bio TEXT NULL",
+    'avatar' => "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL",
+];
+
+foreach ($required as $name => $sql) {
+    if (!isset($columns[$name])) {
+        $pdo->exec($sql);
+    }
+}
+
 $currentUser = $_COOKIE['user'];
 
 $avatarPath = null;
@@ -19,7 +38,7 @@ if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === 0) {
 
 // Обновление данных
 $stmt = $pdo->prepare("
-    UPDATE users SET full_name=:full_name, email=:email, phone=:phone, address=:address, bio=:bio
+    UPDATE users SET fullname=:full_name, email=:email, phone=:phone, address=:address, bio=:bio
     " . ($avatarPath ? ", avatar=:avatar" : "") . "
     WHERE username=:user
 ");
