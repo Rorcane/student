@@ -140,7 +140,6 @@ $t = [
     'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
-    'contact' => $isKz ? 'Байланыс' : 'Контакты',
     'login' => $isKz ? 'Кіру' : 'Войти',
     'title' => $isKz ? 'Вакансияларды табу' : 'Найти вакансию',
     'subtitle' => $isKz ? 'Іздеу мен сүзгілерді пайдаланып, өзіңізге лайық ұсынысты табыңыз.' : 'Используйте поиск и фильтры, чтобы быстро найти подходящее предложение.',
@@ -179,7 +178,6 @@ $paths = [
     'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
-    'contact' => $isKz ? 'contact_kk.html' : 'contact.html',
     'login' => $isKz ? 'login_kk.html' : 'login.html',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
@@ -213,7 +211,6 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['contact']) ?>"><?= htmlspecialchars($t['contact']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">

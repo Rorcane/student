@@ -12,6 +12,17 @@ if (isset($_GET['user'])) {
     $username = $_COOKIE['user'];
 }
 $isOwner = ($_COOKIE['user'] === $username);
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS profile_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        viewer_username VARCHAR(255) NOT NULL,
+        viewed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_profile_views_username (username),
+        INDEX idx_profile_views_viewer (viewer_username),
+        INDEX idx_profile_views_viewed_at (viewed_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
 // Удаляем просмотры старше 7 дней
 $deleteOldViews = $pdo->prepare("
     DELETE FROM profile_views 

@@ -6,10 +6,9 @@ $t = [
     'title' => $isKz ? 'TruWork - жұмыс пен мамандарды іздеу' : 'TruWork - поиск работы и сотрудников',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
-    'about' => $isKz ? 'О нас' : 'О нас',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
-    'contacts' => $isKz ? 'Байланыс' : 'Контакты',
     'login' => $isKz ? 'Кіру' : 'Войти',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'eyebrow' => $isKz ? 'Жұмыс пен командаға арналған бір платформа' : 'Одна платформа для работы и найма',
@@ -24,7 +23,7 @@ $t = [
     'feature_2_title' => $isKz ? 'Екі тіл' : 'Два языка',
     'feature_2_text' => $isKz ? 'Орыс және қазақ тіліндегі нұсқалар арасында тез ауысуға болады.' : 'Можно быстро переключаться между русской и казахской версиями страниц.',
     'feature_3_title' => $isKz ? 'Жылдам навигация' : 'Быстрая навигация',
-    'feature_3_text' => $isKz ? 'Негізгі әрекеттер шапкадан қолжетімді: вакансия іздеу, көмек, байланыс және кіру.' : 'Основные действия доступны прямо из шапки: поиск вакансий, помощь, контакты и вход.',
+    'feature_3_text' => $isKz ? 'Негізгі әрекеттер шапкадан қолжетімді: вакансия іздеу, көмек және кіру.' : 'Основные действия доступны прямо из шапки: поиск вакансий, помощь и вход.',
     'feature_4_title' => $isKz ? 'Түсінікті құрылым' : 'Понятная структура',
     'feature_4_text' => $isKz ? 'Ақпараттық беттер карточкаларға бөлінген, сондықтан мәтін жеңіл оқылады.' : 'Информационные страницы разбиты на карточки, поэтому текст читается легче.',
     'metrics_title' => $isKz ? 'Платформаға не маңызды' : 'Что важно для платформы',
@@ -43,7 +42,6 @@ $paths = [
     'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
-    'contact' => $isKz ? 'contact_kk.html' : 'contact.html',
     'login' => $isKz ? 'login_kk.html' : 'login.html',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
@@ -76,7 +74,6 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['contact']) ?>"><?= htmlspecialchars($t['contacts']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
@@ -105,7 +102,7 @@ $paths = [
         <p><?= htmlspecialchars($t['hero_text']) ?></p>
         <div class="hero__actions">
           <a class="button-primary" href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['hero_primary']) ?></a>
-          <a class="button-secondary" href="vacancy.php"><?= htmlspecialchars($t['hero_secondary']) ?></a>
+          <a class="button-secondary" href="<?= $isKz ? 'vacancy_kk.php' : 'vacancy.php' ?>"><?= htmlspecialchars($t['hero_secondary']) ?></a>
         </div>
         <div class="metric-row">
           <div class="metric"><strong>1160</strong><?= htmlspecialchars($t['metric_1']) ?></div>
