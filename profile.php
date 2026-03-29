@@ -9,7 +9,8 @@ if (!isset($_COOKIE['user'])) {
 $lang = $siteLang ?? 'ru';
 $isKz = $lang === 'kk';
 
-function ensure_profile_columns(PDO $pdo): void {
+function ensure_profile_columns(PDO $pdo): void
+{
     $columns = [];
     $stmt = $pdo->query("SHOW COLUMNS FROM users");
     foreach ($stmt as $row) {
@@ -23,8 +24,8 @@ function ensure_profile_columns(PDO $pdo): void {
         'avatar' => "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL",
     ];
 
-    foreach ($required as $name => $sql) {
-        if (!isset($columns[$name])) {
+    foreach ($required as $column => $sql) {
+        if (!isset($columns[$column])) {
             $pdo->exec($sql);
         }
     }
@@ -32,7 +33,7 @@ function ensure_profile_columns(PDO $pdo): void {
 
 ensure_profile_columns($pdo);
 
-$username = isset($_GET['user']) ? (string) $_GET['user'] : (string) $_COOKIE['user'];
+$username = isset($_GET['user']) ? trim((string) $_GET['user']) : (string) $_COOKIE['user'];
 $isOwner = $_COOKIE['user'] === $username;
 
 $pdo->exec("
@@ -47,8 +48,7 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-$deleteOldViews = $pdo->prepare("DELETE FROM profile_views WHERE viewed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
-$deleteOldViews->execute();
+$pdo->prepare("DELETE FROM profile_views WHERE viewed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)")->execute();
 
 $stmt = $pdo->prepare("
     SELECT username, fullname, email, phone, address, bio, avatar
@@ -60,99 +60,135 @@ $stmt->execute([':username' => $username]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$user) {
-    die($isKz ? 'Пайдаланушы табылмады' : 'Пользователь не найден');
+    http_response_code(404);
+    exit($isKz ? 'Пайдаланушы табылмады' : 'Пользователь не найден');
 }
 
-if ($isOwner && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar']) && $_FILES['avatar']['error'] === 0) {
-    if (!is_dir('avatars')) {
-        mkdir('avatars', 0755, true);
+if ($isOwner && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+    if (!is_dir(__DIR__ . '/avatars')) {
+        mkdir(__DIR__ . '/avatars', 0755, true);
     }
-    $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
-    $newName = 'avatars/' . $_COOKIE['user'] . '_' . time() . '.' . $ext;
-    move_uploaded_file($_FILES['avatar']['tmp_name'], $newName);
-    $stmt = $pdo->prepare("UPDATE users SET avatar = :avatar WHERE username = :user");
-    $stmt->execute([':avatar' => $newName, ':user' => $_COOKIE['user']]);
-    $user['avatar'] = $newName;
+
+    $extension = strtolower((string) pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    if (in_array($extension, $allowed, true)) {
+        $avatarPath = 'avatars/' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $_COOKIE['user']) . '_' . time() . '.' . $extension;
+        if (move_uploaded_file($_FILES['avatar']['tmp_name'], __DIR__ . '/' . $avatarPath)) {
+            $updateAvatar = $pdo->prepare("UPDATE users SET avatar = :avatar WHERE username = :username");
+            $updateAvatar->execute([
+                ':avatar' => $avatarPath,
+                ':username' => $_COOKIE['user'],
+            ]);
+            $user['avatar'] = $avatarPath;
+        }
+    }
 }
 
 if (isset($_COOKIE['user']) && $_COOKIE['user'] !== $username) {
     $viewer = $_COOKIE['user'];
-    $check = $pdo->prepare("
+    $checkView = $pdo->prepare("
         SELECT id
           FROM profile_views
          WHERE username = :profile
            AND viewer_username = :viewer
            AND DATE(viewed_at) = CURDATE()
+         LIMIT 1
     ");
-    $check->execute([':profile' => $username, ':viewer' => $viewer]);
+    $checkView->execute([
+        ':profile' => $username,
+        ':viewer' => $viewer,
+    ]);
 
-    if (!$check->fetch()) {
-        $insert = $pdo->prepare("
+    if (!$checkView->fetch()) {
+        $insertView = $pdo->prepare("
             INSERT INTO profile_views (username, viewer_username, viewed_at)
             VALUES (:profile, :viewer, NOW())
         ");
-        $insert->execute([':profile' => $username, ':viewer' => $viewer]);
+        $insertView->execute([
+            ':profile' => $username,
+            ':viewer' => $viewer,
+        ]);
     }
 }
 
-$stmt = $pdo->prepare("
+$activityStmt = $pdo->prepare("
     SELECT DATE(viewed_at) AS view_date, COUNT(*) AS total
       FROM profile_views
      WHERE username = :username
        AND viewed_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
      GROUP BY DATE(viewed_at)
 ");
-$stmt->execute([':username' => $username]);
-$viewsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$activityStmt->execute([':username' => $username]);
+$activityRows = $activityStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$views = [];
+$viewsByDay = [];
 for ($i = 6; $i >= 0; $i--) {
-    $date = date('Y-m-d', strtotime("-$i days"));
-    $views[$date] = 0;
+    $date = date('Y-m-d', strtotime("-{$i} days"));
+    $viewsByDay[$date] = 0;
 }
-foreach ($viewsData as $row) {
-    $views[$row['view_date']] = (int) $row['total'];
+foreach ($activityRows as $row) {
+    $viewsByDay[$row['view_date']] = (int) $row['total'];
 }
-$viewsJson = json_encode(array_values($views));
 
+$totalViews = array_sum($viewsByDay);
+$profileFields = [
+    trim((string) ($user['fullname'] ?? '')),
+    trim((string) ($user['email'] ?? '')),
+    trim((string) ($user['phone'] ?? '')),
+    trim((string) ($user['address'] ?? '')),
+    trim((string) ($user['bio'] ?? '')),
+];
+$filledFields = count(array_filter($profileFields, static fn($value) => $value !== ''));
+$completion = (int) round(($filledFields / count($profileFields)) * 100);
 $avatarPath = !empty($user['avatar']) ? $user['avatar'] : 'avatars/default-avatar.png';
+$maxViews = max(1, max($viewsByDay));
 
 $t = [
     'title' => $isKz ? 'Профиль | TruWork' : 'Профиль | TruWork',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
     'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
     'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
+    'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
     'logout' => $isKz ? 'Шығу' : 'Выйти',
-    'heading' => $isKz ? 'Профиль' : 'Профиль',
-    'subtitle' => $isKz ? 'Пайдаланушы туралы негізгі ақпарат пен белсенділік бір жерде.' : 'Основная информация о пользователе и активность в одном месте.',
+    'heading' => $isKz ? 'Жеке профиль' : 'Личный профиль',
+    'subtitle' => $isKz ? 'Негізгі ақпарат, белсенділік және жеке баптаулар бір бетте.' : 'Основная информация, активность и личные разделы в одном аккуратном интерфейсе.',
+    'owner_badge' => $isKz ? 'Бұл сіздің профиліңіз' : 'Это ваш профиль',
+    'guest_badge' => $isKz ? 'Қарап шығу режимі' : 'Просмотр профиля',
+    'total_views' => $isKz ? '7 күндегі қаралымдар' : 'Просмотры за 7 дней',
+    'completion' => $isKz ? 'Профиль толтырылуы' : 'Заполненность профиля',
+    'account' => $isKz ? 'Аккаунт' : 'Аккаунт',
     'fullname' => $isKz ? 'Толық аты' : 'Полное имя',
     'email' => 'Email',
     'phone' => $isKz ? 'Телефон' : 'Телефон',
-    'address' => $isKz ? 'Мекенжай' : 'Адрес',
+    'address' => $isKz ? 'Адрес' : 'Адрес',
     'bio' => $isKz ? 'Өзі туралы' : 'О себе',
-    'activity' => $isKz ? 'Профиль белсенділігі' : 'Активность профиля',
-    'recommendation' => $isKz ? 'Профильді толықтыру ұсынылады.' : 'Рекомендуется заполнить профиль подробнее.',
-    'edit' => $isKz ? 'Профильді өңдеу' : 'Редактировать профиль',
-    'save' => $isKz ? 'Сақтау' : 'Сохранить',
-    'cancel' => $isKz ? 'Бас тарту' : 'Отмена',
-    'avatar' => $isKz ? 'Профиль суреті' : 'Фото профиля',
-    'policy' => $isKz ? 'Құпиялылық саясаты' : 'Политика конфиденциальности',
+    'empty' => $isKz ? 'Әлі толтырылмаған' : 'Пока не заполнено',
+    'activity' => $isKz ? 'Соңғы 7 күндегі белсенділік' : 'Активность за последние 7 дней',
+    'activity_note' => $isKz ? 'Әр баған профиліңізді қараған адамдар санын көрсетеді.' : 'Каждый столбец показывает количество просмотров профиля за день.',
+    'change_avatar' => $isKz ? 'Аватарды жаңарту' : 'Обновить фото',
+    'upload' => $isKz ? 'Жүктеу' : 'Загрузить',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+    'footer_note' => $isKz ? 'Жеке кабинет енді жалпы сайт стилімен толық үйлестірілген.' : 'Личный кабинет теперь полностью совпадает по стилю с остальным сайтом.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
+    'security' => $isKz ? 'security_kk.php' : 'security.php',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+    'tests' => 'IDM.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -166,11 +202,73 @@ $paths = [
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/public-site.css">
+  <style>
+    .profile-summary {
+      display: grid;
+      grid-template-columns: 188px minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .profile-avatar {
+      width: 188px;
+      height: 188px;
+      border-radius: 28px;
+      object-fit: cover;
+      border: 4px solid #fff;
+      box-shadow: 0 16px 34px rgba(20, 33, 61, 0.14);
+    }
+    .profile-badge {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(29, 78, 216, 0.08);
+      color: #1d4ed8;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .activity-bars {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
+      min-height: 220px;
+      margin-top: 18px;
+    }
+    .activity-bar {
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      gap: 10px;
+      min-height: 220px;
+    }
+    .activity-bar__fill {
+      border-radius: 18px 18px 10px 10px;
+      background: linear-gradient(180deg, #1d4ed8 0%, #0f766e 100%);
+      min-height: 18px;
+    }
+    .activity-bar__meta {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (max-width: 768px) {
+      .profile-summary {
+        grid-template-columns: 1fr;
+      }
+      .profile-avatar {
+        width: 160px;
+        height: 160px;
+      }
+      .activity-bars {
+        gap: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -180,9 +278,8 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
         <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['profile']) ?>" class="is-active"><?= htmlspecialchars($t['profile']) ?></a>
-        <a href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($t['settings']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
@@ -194,87 +291,97 @@ $paths = [
             <a href="profile_kk.php<?= !$isOwner ? '?user=' . urlencode($username) : '' ?>">KZ</a>
           <?php endif; ?>
         </div>
-        <a class="button-primary" href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($_COOKIE['user']) ?></a>
       </div>
     </div>
   </header>
 
   <main class="page-main">
-    <div class="site-shell grid">
-      <section class="page-card">
-        <h1 class="section-title"><?= htmlspecialchars($t['heading']) ?></h1>
-        <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+    <div class="site-shell dashboard-layout">
+      <aside class="dashboard-sidebar">
+        <h2 class="sidebar-title"><?= htmlspecialchars($t['account']) ?></h2>
+        <nav class="sidebar-nav">
+          <a class="is-active" href="<?= htmlspecialchars($paths['profile']) ?><?= !$isOwner ? '?user=' . urlencode($username) : '' ?>"><span><?= htmlspecialchars($t['profile']) ?></span><span>01</span></a>
+          <?php if ($isOwner): ?>
+            <a href="<?= htmlspecialchars($paths['settings']) ?>"><span><?= htmlspecialchars($t['settings']) ?></span><span>02</span></a>
+            <a href="<?= htmlspecialchars($paths['security']) ?>"><span><?= htmlspecialchars($t['security']) ?></span><span>03</span></a>
+            <a href="<?= htmlspecialchars($paths['tests']) ?>"><span><?= htmlspecialchars($t['skills']) ?></span><span>04</span></a>
+            <a href="logout.php"><span><?= htmlspecialchars($t['logout']) ?></span><span>05</span></a>
+          <?php endif; ?>
+        </nav>
+      </aside>
 
-        <div class="footer-links" style="margin-bottom:22px;">
-          <a href="<?= htmlspecialchars($paths['profile']) ?>" class="button-primary"><?= htmlspecialchars($t['profile']) ?></a>
-          <a href="<?= htmlspecialchars($paths['settings']) ?>" class="button-secondary"><?= htmlspecialchars($t['settings']) ?></a>
-          <a href="security.php" class="button-secondary"><?= htmlspecialchars($t['security']) ?></a>
-          <a href="logout.php" class="button-secondary"><?= htmlspecialchars($t['logout']) ?></a>
+      <section class="dashboard-content">
+        <div class="dashboard-hero">
+          <div class="dashboard-hero__text">
+            <span class="profile-badge"><?= htmlspecialchars($isOwner ? $t['owner_badge'] : $t['guest_badge']) ?></span>
+            <h1 class="section-title"><?= htmlspecialchars($t['heading']) ?></h1>
+            <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+          </div>
+          <?php if ($isOwner): ?>
+            <form method="post" enctype="multipart/form-data" class="stack-actions">
+              <label class="button-secondary" for="avatar"><?= htmlspecialchars($t['change_avatar']) ?></label>
+              <input id="avatar" type="file" name="avatar" accept="image/*" hidden>
+              <button class="button-primary" type="submit"><?= htmlspecialchars($t['upload']) ?></button>
+            </form>
+          <?php endif; ?>
+        </div>
+
+        <div class="profile-summary">
+          <img class="profile-avatar" src="<?= htmlspecialchars($avatarPath) ?>" alt="avatar">
+          <div>
+            <h2 style="margin:0 0 6px;"><?= htmlspecialchars((string) ($user['fullname'] ?: $user['username'])) ?></h2>
+            <p class="muted" style="margin:0 0 14px;">@<?= htmlspecialchars($user['username']) ?></p>
+            <div class="stat-grid">
+              <article class="stat-card">
+                <strong><?= $totalViews ?></strong>
+                <span><?= htmlspecialchars($t['total_views']) ?></span>
+              </article>
+              <article class="stat-card">
+                <strong><?= $completion ?>%</strong>
+                <span><?= htmlspecialchars($t['completion']) ?></span>
+              </article>
+              <article class="stat-card">
+                <strong><?= $isOwner ? 'You' : 'View' ?></strong>
+                <span><?= htmlspecialchars($isOwner ? $t['owner_badge'] : $t['guest_badge']) ?></span>
+              </article>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-2">
-          <div class="info-card" style="text-align:center;">
-            <img src="<?= htmlspecialchars($avatarPath) ?>" alt="avatar" style="width:180px;height:180px;border-radius:24px;object-fit:cover;margin:0 auto 18px;">
-            <h3 style="margin-bottom:6px;"><?= htmlspecialchars((string) ($user['fullname'] ?? $user['username'])) ?></h3>
-            <p class="muted" style="margin-bottom:0;">@<?= htmlspecialchars($user['username']) ?></p>
-          </div>
-          <div class="info-card">
-            <p><strong><?= htmlspecialchars($t['fullname']) ?>:</strong> <?= htmlspecialchars((string) ($user['fullname'] ?? '')) ?></p>
-            <p><strong><?= htmlspecialchars($t['email']) ?>:</strong> <?= htmlspecialchars((string) ($user['email'] ?? '')) ?></p>
-            <p><strong><?= htmlspecialchars($t['phone']) ?>:</strong> <?= htmlspecialchars((string) ($user['phone'] ?? '')) ?></p>
-            <p><strong><?= htmlspecialchars($t['address']) ?>:</strong> <?= htmlspecialchars((string) ($user['address'] ?? '')) ?></p>
-            <p style="margin-bottom:0;"><strong><?= htmlspecialchars($t['bio']) ?>:</strong> <?= htmlspecialchars((string) ($user['bio'] ?? '')) ?></p>
-          </div>
-        </div>
+          <article class="info-card">
+            <h3><?= htmlspecialchars($t['account']) ?></h3>
+            <p><strong><?= htmlspecialchars($t['fullname']) ?>:</strong> <?= htmlspecialchars((string) ($user['fullname'] ?: $t['empty'])) ?></p>
+            <p><strong><?= htmlspecialchars($t['email']) ?>:</strong> <?= htmlspecialchars((string) ($user['email'] ?: $t['empty'])) ?></p>
+            <p><strong><?= htmlspecialchars($t['phone']) ?>:</strong> <?= htmlspecialchars((string) ($user['phone'] ?: $t['empty'])) ?></p>
+            <p><strong><?= htmlspecialchars($t['address']) ?>:</strong> <?= htmlspecialchars((string) ($user['address'] ?: $t['empty'])) ?></p>
+            <p style="margin-bottom:0;"><strong><?= htmlspecialchars($t['bio']) ?>:</strong> <?= htmlspecialchars((string) ($user['bio'] ?: $t['empty'])) ?></p>
+          </article>
 
-        <div class="grid grid-2" style="margin-top:22px;">
-          <div class="info-card">
+          <article class="info-card">
             <h3><?= htmlspecialchars($t['activity']) ?></h3>
-            <div class="bg-light p-3 rounded">
-              <canvas id="viewsChart" height="150"></canvas>
+            <p><?= htmlspecialchars($t['activity_note']) ?></p>
+            <div class="activity-bars">
+              <?php foreach ($viewsByDay as $date => $value): ?>
+                <?php $height = max(18, (int) round(($value / $maxViews) * 170)); ?>
+                <div class="activity-bar">
+                  <div class="activity-bar__meta"><?= $value ?></div>
+                  <div class="activity-bar__fill" style="height: <?= $height ?>px;"></div>
+                  <div class="activity-bar__meta"><?= htmlspecialchars(date('d.m', strtotime($date))) ?></div>
+                </div>
+              <?php endforeach; ?>
             </div>
-          </div>
-          <div class="info-card">
-            <h3><?= htmlspecialchars($t['edit']) ?></h3>
-            <p><?= htmlspecialchars($t['recommendation']) ?></p>
-            <?php if ($isOwner): ?>
-              <button class="button-primary" type="button" data-bs-toggle="modal" data-bs-target="#editProfileModal"><?= htmlspecialchars($t['edit']) ?></button>
-            <?php endif; ?>
-          </div>
+          </article>
         </div>
       </section>
     </div>
   </main>
 
-  <?php if ($isOwner): ?>
-    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <form method="post" enctype="multipart/form-data" class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title"><?= htmlspecialchars($t['edit']) ?></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($t['cancel']) ?>"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label"><?= htmlspecialchars($t['avatar']) ?></label>
-              <input type="file" name="avatar" class="form-control" accept="image/*">
-            </div>
-            <p class="text-muted mb-0"><?= $isKz ? 'Қалған деректерді баптаулар бетінен өзгертіңіз.' : 'Остальные данные редактируются на странице настроек.' ?></p>
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary"><?= htmlspecialchars($t['save']) ?></button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars($t['cancel']) ?></button>
-          </div>
-        </form>
-      </div>
-    </div>
-  <?php endif; ?>
-
   <footer class="site-footer">
     <div class="site-shell site-footer__panel">
       <div>
         <strong>TruWork</strong>
-        <div class="footer-note"><?= $isKz ? 'Профиль мен белсенділікті бірыңғай заманауи стильде көру.' : 'Просмотр профиля и активности в едином современном стиле.' ?></div>
+        <div class="footer-note"><?= htmlspecialchars($t['footer_note']) ?></div>
       </div>
       <div class="footer-links">
         <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>
@@ -283,38 +390,5 @@ $paths = [
       </div>
     </div>
   </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const viewsData = <?= $viewsJson ?>;
-    const maxValue = Math.max(...viewsData);
-    const dynamicMax = maxValue < 1 ? 1 : maxValue + 1;
-
-    new Chart(document.getElementById('viewsChart'), {
-      type: 'line',
-      data: {
-        labels: ['6','5','4','3','2','1','0'],
-        datasets: [{
-          label: '<?= $isKz ? 'Қаралымдар' : 'Просмотры' ?>',
-          data: viewsData,
-          borderColor: '#1d4ed8',
-          backgroundColor: 'rgba(29,78,216,0.08)',
-          tension: 0.35,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            min: 0,
-            max: dynamicMax,
-            ticks: { stepSize: 1 }
-          }
-        }
-      }
-    });
-  </script>
 </body>
 </html>

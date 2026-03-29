@@ -8,9 +8,10 @@ if (!isset($_COOKIE['user'])) {
 
 $lang = $siteLang ?? 'ru';
 $isKz = $lang === 'kk';
-$currentUser = $_COOKIE['user'];
+$currentUser = (string) $_COOKIE['user'];
 
-function ensure_profile_columns(PDO $pdo): void {
+function ensure_settings_columns(PDO $pdo): void
+{
     $columns = [];
     $stmt = $pdo->query("SHOW COLUMNS FROM users");
     foreach ($stmt as $row) {
@@ -24,20 +25,20 @@ function ensure_profile_columns(PDO $pdo): void {
         'avatar' => "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL",
     ];
 
-    foreach ($required as $name => $sql) {
-        if (!isset($columns[$name])) {
+    foreach ($required as $column => $sql) {
+        if (!isset($columns[$column])) {
             $pdo->exec($sql);
         }
     }
 }
 
-ensure_profile_columns($pdo);
+ensure_settings_columns($pdo);
 
 $notice = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $stmt = $pdo->prepare("
+    $update = $pdo->prepare("
         UPDATE users
            SET fullname = :fullname,
                email = :email,
@@ -48,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ");
 
     try {
-        $stmt->execute([
+        $update->execute([
             ':fullname' => trim((string) ($_POST['full_name'] ?? '')),
             ':email' => trim((string) ($_POST['email'] ?? '')),
             ':phone' => trim((string) ($_POST['phone'] ?? '')),
@@ -62,17 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->prepare("
-    SELECT username, fullname, email, phone, address, bio, avatar
+$userStmt = $pdo->prepare("
+    SELECT username, fullname, email, phone, address, bio
       FROM users
      WHERE username = :username
      LIMIT 1
 ");
-$stmt->execute([':username' => $currentUser]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$userStmt->execute([':username' => $currentUser]);
+$user = $userStmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$user) {
-    die($isKz ? 'Пайдаланушы табылмады' : 'Пользователь не найден');
+    http_response_code(404);
+    exit($isKz ? 'Пайдаланушы табылмады' : 'Пользователь не найден');
 }
 
 $t = [
@@ -80,32 +82,39 @@ $t = [
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
     'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
     'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
+    'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
     'logout' => $isKz ? 'Шығу' : 'Выйти',
     'heading' => $isKz ? 'Аккаунт баптаулары' : 'Настройки аккаунта',
-    'subtitle' => $isKz ? 'Профиль деректерін жаңартыңыз. Бұл бет енді шынымен сақтайды.' : 'Обновите данные профиля. Эта страница теперь действительно сохраняет изменения.',
-    'full_name' => $isKz ? 'Толық аты' : 'Полное имя',
+    'subtitle' => $isKz ? 'Профиль деректерін жаңартыңыз. Бұл форма өзгерістерді бірден сақтайды.' : 'Обновите данные профиля. Эта форма сразу сохраняет актуальные контактные данные.',
+    'saved' => $isKz ? 'Сақталды' : 'Сохранено',
+    'fullname' => $isKz ? 'Толық аты' : 'Полное имя',
     'email' => 'Email',
     'phone' => $isKz ? 'Телефон' : 'Телефон',
-    'address' => $isKz ? 'Мекенжай' : 'Адрес',
+    'address' => $isKz ? 'Адрес' : 'Адрес',
     'bio' => $isKz ? 'Өзі туралы' : 'О себе',
     'save' => $isKz ? 'Сақтау' : 'Сохранить',
-    'policy' => $isKz ? 'Құпиялылық саясаты' : 'Политика конфиденциальности',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+    'footer_note' => $isKz ? 'Жеке баптаулар енді кабинет құрылымымен толық біріктірілген.' : 'Настройки теперь встроены в ту же структуру кабинета, что и профиль.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
+    'security' => $isKz ? 'security_kk.php' : 'security.php',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+    'tests' => 'IDM.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -119,7 +128,6 @@ $paths = [
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -133,9 +141,8 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
         <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($t['profile']) ?></a>
-        <a href="<?= htmlspecialchars($paths['settings']) ?>" class="is-active"><?= htmlspecialchars($t['settings']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
@@ -147,22 +154,30 @@ $paths = [
             <a href="settings_kk.php">KZ</a>
           <?php endif; ?>
         </div>
-        <a class="button-primary" href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($currentUser) ?></a>
       </div>
     </div>
   </header>
 
   <main class="page-main">
-    <div class="site-shell grid">
-      <section class="page-card">
-        <h1 class="section-title"><?= htmlspecialchars($t['heading']) ?></h1>
-        <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+    <div class="site-shell dashboard-layout">
+      <aside class="dashboard-sidebar">
+        <h2 class="sidebar-title"><?= htmlspecialchars($t['settings']) ?></h2>
+        <nav class="sidebar-nav">
+          <a href="<?= htmlspecialchars($paths['profile']) ?>"><span><?= htmlspecialchars($t['profile']) ?></span><span>01</span></a>
+          <a class="is-active" href="<?= htmlspecialchars($paths['settings']) ?>"><span><?= htmlspecialchars($t['settings']) ?></span><span>02</span></a>
+          <a href="<?= htmlspecialchars($paths['security']) ?>"><span><?= htmlspecialchars($t['security']) ?></span><span>03</span></a>
+          <a href="<?= htmlspecialchars($paths['tests']) ?>"><span><?= htmlspecialchars($t['skills']) ?></span><span>04</span></a>
+          <a href="logout.php"><span><?= htmlspecialchars($t['logout']) ?></span><span>05</span></a>
+        </nav>
+      </aside>
 
-        <div class="footer-links" style="margin-bottom:22px;">
-          <a href="<?= htmlspecialchars($paths['profile']) ?>" class="button-secondary"><?= htmlspecialchars($t['profile']) ?></a>
-          <a href="<?= htmlspecialchars($paths['settings']) ?>" class="button-primary"><?= htmlspecialchars($t['settings']) ?></a>
-          <a href="security.php" class="button-secondary"><?= htmlspecialchars($t['security']) ?></a>
-          <a href="logout.php" class="button-secondary"><?= htmlspecialchars($t['logout']) ?></a>
+      <section class="dashboard-content">
+        <div class="dashboard-hero">
+          <div class="dashboard-hero__text">
+            <span class="profile-badge"><?= htmlspecialchars($t['saved']) ?></span>
+            <h1 class="section-title"><?= htmlspecialchars($t['heading']) ?></h1>
+            <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+          </div>
         </div>
 
         <?php if ($notice): ?>
@@ -176,7 +191,7 @@ $paths = [
         <form method="post" class="form-stack">
           <div class="form-grid">
             <div>
-              <label class="label" for="full_name"><?= htmlspecialchars($t['full_name']) ?></label>
+              <label class="label" for="full_name"><?= htmlspecialchars($t['fullname']) ?></label>
               <input class="input" id="full_name" type="text" name="full_name" value="<?= htmlspecialchars((string) ($user['fullname'] ?? '')) ?>">
             </div>
             <div>
@@ -192,11 +207,13 @@ $paths = [
               <input class="input" id="address" type="text" name="address" value="<?= htmlspecialchars((string) ($user['address'] ?? '')) ?>">
             </div>
           </div>
+
           <div>
             <label class="label" for="bio"><?= htmlspecialchars($t['bio']) ?></label>
             <textarea class="textarea" id="bio" name="bio"><?= htmlspecialchars((string) ($user['bio'] ?? '')) ?></textarea>
           </div>
-          <div>
+
+          <div class="stack-actions">
             <button class="button-primary" type="submit"><?= htmlspecialchars($t['save']) ?></button>
           </div>
         </form>
@@ -208,7 +225,7 @@ $paths = [
     <div class="site-shell site-footer__panel">
       <div>
         <strong>TruWork</strong>
-        <div class="footer-note"><?= $isKz ? 'Параметрлерді заманауи және түсінікті түрде басқару.' : 'Современное и понятное управление настройками аккаунта.' ?></div>
+        <div class="footer-note"><?= htmlspecialchars($t['footer_note']) ?></div>
       </div>
       <div class="footer-links">
         <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>

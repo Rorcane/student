@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   var cookies = document.cookie ? document.cookie.split('; ') : [];
   var authLink = document.querySelector('[data-auth-link]');
   var navContactLinks = document.querySelectorAll('nav a[href="contact.html"], nav a[href="contact_kk.html"]');
@@ -18,7 +18,7 @@
 
   if (authLink && user) {
     authLink.textContent = user;
-    authLink.setAttribute('href', 'profile.php');
+    authLink.setAttribute('href', lang === 'kk' ? 'profile_kk.php' : 'profile.php');
   }
 
   navContactLinks.forEach(function (link) {
@@ -40,3 +40,4 @@
     }
   }
 }());
+

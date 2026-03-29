@@ -1,12 +1,12 @@
-<?php
+﻿<?php
 
 require_once 'config.php';
 session_start();
 
-// если есть сохранённые результаты из прошлой загрузки (fallback)
+// РµСЃР»Рё РµСЃС‚СЊ СЃРѕС…СЂР°РЅС‘РЅРЅС‹Рµ СЂРµР·СѓР»СЊС‚Р°С‚С‹ РёР· РїСЂРѕС€Р»РѕР№ Р·Р°РіСЂСѓР·РєРё (fallback)
 $session_search_html = $_SESSION['smart_search_html'] ?? '';
 $session_success     = $_SESSION['smart_search_success'] ?? '';
-// очистка сессии при clear=1 (опционально)
+// РѕС‡РёСЃС‚РєР° СЃРµСЃСЃРёРё РїСЂРё clear=1 (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
 if (isset($_GET['clear'])) {
     unset($_SESSION['smart_search_html'], $_SESSION['smart_search_success']);
     header('Location: ' . (isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : 'smart_search.php'));
@@ -14,7 +14,7 @@ if (isset($_GET['clear'])) {
 }
 
 /**
- * Получаем роль/пользователя из куки (как в vacancies.php)
+ * РџРѕР»СѓС‡Р°РµРј СЂРѕР»СЊ/РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РёР· РєСѓРєРё (РєР°Рє РІ vacancies.php)
  */
 $user = null;
 if (isset($_COOKIE['user'])) {
@@ -23,16 +23,16 @@ if (isset($_COOKIE['user'])) {
     $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// вычислим user id (если авторизован)
+// РІС‹С‡РёСЃР»РёРј user id (РµСЃР»Рё Р°РІС‚РѕСЂРёР·РѕРІР°РЅ)
 $myId = $user['id'] ?? null;
 
 /**
- * Вычисляем базовый путь относительно места размещения скрипта.
+ * Р’С‹С‡РёСЃР»СЏРµРј Р±Р°Р·РѕРІС‹Р№ РїСѓС‚СЊ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РјРµСЃС‚Р° СЂР°Р·РјРµС‰РµРЅРёСЏ СЃРєСЂРёРїС‚Р°.
  */
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 if ($basePath === '/' || $basePath === '\\' || $basePath === '.') $basePath = '';
 
-// Обработка удаления анализа (POST)
+// РћР±СЂР°Р±РѕС‚РєР° СѓРґР°Р»РµРЅРёСЏ Р°РЅР°Р»РёР·Р° (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_analysis_id']) && $myId) {
     $delId = (int)$_POST['delete_analysis_id'];
     $del = $pdo->prepare("DELETE FROM analyses WHERE id = ? AND user_id = ?");
@@ -41,29 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_analysis_id'])
     exit();
 }
 
-// Переменные для вывода
+// РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РІС‹РІРѕРґР°
 $errors = [];
 $success = '';
-$search_html = ''; // сюда поместим HTML текущего/просматриваемого анализа
+$search_html = ''; // СЃСЋРґР° РїРѕРјРµСЃС‚РёРј HTML С‚РµРєСѓС‰РµРіРѕ/РїСЂРѕСЃРјР°С‚СЂРёРІР°РµРјРѕРіРѕ Р°РЅР°Р»РёР·Р°
 
-// --- Обработка загрузки и анализа резюме ---
+// --- РћР±СЂР°Р±РѕС‚РєР° Р·Р°РіСЂСѓР·РєРё Рё Р°РЅР°Р»РёР·Р° СЂРµР·СЋРјРµ ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
-    // (вставлена ваша логика сохранения/валидации файла)
+    // (РІСЃС‚Р°РІР»РµРЅР° РІР°С€Р° Р»РѕРіРёРєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ/РІР°Р»РёРґР°С†РёРё С„Р°Р№Р»Р°)
     $file = $_FILES['resume'];
 
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        $errors[] = 'Ошибка при загрузке файла.';
+        $errors[] = 'РћС€РёР±РєР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ С„Р°Р№Р»Р°.';
     } else {
-        // Проверки: размер и расширение
+        // РџСЂРѕРІРµСЂРєРё: СЂР°Р·РјРµСЂ Рё СЂР°СЃС€РёСЂРµРЅРёРµ
         $maxBytes = 5 * 1024 * 1024; // 5 MB
         if ($file['size'] > $maxBytes) {
-            $errors[] = 'Файл слишком большой. Максимум 5 МБ.';
+            $errors[] = 'Р¤Р°Р№Р» СЃР»РёС€РєРѕРј Р±РѕР»СЊС€РѕР№. РњР°РєСЃРёРјСѓРј 5 РњР‘.';
         }
 
         $allowed = ['pdf', 'doc', 'docx', 'txt'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, $allowed, true)) {
-            $errors[] = 'Недопустимый формат файла. Разрешены: PDF, DOC, DOCX, TXT.';
+            $errors[] = 'РќРµРґРѕРїСѓСЃС‚РёРјС‹Р№ С„РѕСЂРјР°С‚ С„Р°Р№Р»Р°. Р Р°Р·СЂРµС€РµРЅС‹: PDF, DOC, DOCX, TXT.';
         }
 
         $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -84,19 +84,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
             $dest = $uploadDir . DIRECTORY_SEPARATOR . $unique;
 
             if (move_uploaded_file($file['tmp_name'], $dest)) {
-                // попытка сохранить запись в таблицу resumes (если есть)
+                // РїРѕРїС‹С‚РєР° СЃРѕС…СЂР°РЅРёС‚СЊ Р·Р°РїРёСЃСЊ РІ С‚Р°Р±Р»РёС†Сѓ resumes (РµСЃР»Рё РµСЃС‚СЊ)
                 try {
                     $iStmt = $pdo->prepare("INSERT INTO resumes (filename, original_name, uploaded_at, uploader) VALUES (?, ?, NOW(), ?)");
                     $uploader = isset($_COOKIE['user']) ? $_COOKIE['user'] : null;
                     $iStmt->execute([$unique, $file['name'], $uploader]);
                 } catch (Exception $e) {
-                    // игнорируем, если таблицы нет
+                    // РёРіРЅРѕСЂРёСЂСѓРµРј, РµСЃР»Рё С‚Р°Р±Р»РёС†С‹ РЅРµС‚
                 }
 
-                $success = 'Резюме успешно загружено.';
+                $success = 'Р РµР·СЋРјРµ СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅРѕ.';
 
                 // -----------------------
-                // Блок: извлечение текста и поиск вакансий
+                // Р‘Р»РѕРє: РёР·РІР»РµС‡РµРЅРёРµ С‚РµРєСЃС‚Р° Рё РїРѕРёСЃРє РІР°РєР°РЅСЃРёР№
                 // -----------------------
                 function extract_text_from_docx($path) {
                     $text = '';
@@ -148,8 +148,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                     $clean = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text);
                     $words = preg_split('/\s+/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
                     $stop = [
-                      'и','в','во','не','что','он','на','я','с','со','как','а','то','все','она','так',
-                      'его','но','да','ты','к','у','же','вы','за','бы','по','только','или','для',
+                      'Рё','РІ','РІРѕ','РЅРµ','С‡С‚Рѕ','РѕРЅ','РЅР°','СЏ','СЃ','СЃРѕ','РєР°Рє','Р°','С‚Рѕ','РІСЃРµ','РѕРЅР°','С‚Р°Рє',
+                      'РµРіРѕ','РЅРѕ','РґР°','С‚С‹','Рє','Сѓ','Р¶Рµ','РІС‹','Р·Р°','Р±С‹','РїРѕ','С‚РѕР»СЊРєРѕ','РёР»Рё','РґР»СЏ',
                       'is','the','and','a','to','of','in','on','with','as','by','from'
                     ];
                     $freq = [];
@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                         $params[$p] = "%{$kw}%";
                     }
                     $where = implode(' OR ', $whereParts);
-                    // Если в базе нет created_at для вакансий, безопаснее ORDER BY v.id DESC (но оставим created_at, как у вас было)
+                    // Р•СЃР»Рё РІ Р±Р°Р·Рµ РЅРµС‚ created_at РґР»СЏ РІР°РєР°РЅСЃРёР№, Р±РµР·РѕРїР°СЃРЅРµРµ ORDER BY v.id DESC (РЅРѕ РѕСЃС‚Р°РІРёРј created_at, РєР°Рє Сѓ РІР°СЃ Р±С‹Р»Рѕ)
                     $sql = "SELECT v.*, COUNT(a.id) AS responses
                                 FROM vacancies v
                                 LEFT JOIN applications a ON a.vacancy_id = v.id
@@ -186,18 +186,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                     return $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
 
-                // получить текст
+                // РїРѕР»СѓС‡РёС‚СЊ С‚РµРєСЃС‚
                 $text = extract_text_from_file($dest);
                 if (trim($text) === '') $text = pathinfo($file['name'], PATHINFO_FILENAME);
                 $keywords = extract_keywords($text, 12);
                 if (empty($keywords)) {
-                    $fnWords = preg_split('/[^A-Za-zА-Яа-я0-9]+/u', pathinfo($file['name'], PATHINFO_FILENAME));
+                    $fnWords = preg_split('/[^A-Za-zРђ-РЇР°-СЏ0-9]+/u', pathinfo($file['name'], PATHINFO_FILENAME));
                     $keywords = array_slice(array_filter($fnWords), 0, 6);
                 }
 
                 $matches = search_vacancies_by_keywords($pdo, $keywords);
 
-                // --- Сохранение анализа в БД, привязанное к пользователю (если авторизован) ---
+                // --- РЎРѕС…СЂР°РЅРµРЅРёРµ Р°РЅР°Р»РёР·Р° РІ Р‘Р”, РїСЂРёРІСЏР·Р°РЅРЅРѕРµ Рє РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ (РµСЃР»Рё Р°РІС‚РѕСЂРёР·РѕРІР°РЅ) ---
                 if ($myId) {
                     try {
                         $matches_short = [];
@@ -218,18 +218,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                             implode(', ', $keywords),
                             json_encode($matches_short, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
                         ]);
-                        // можно использовать $analysisId = $pdo->lastInsertId();
+                        // РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ $analysisId = $pdo->lastInsertId();
                     } catch (Exception $e) {
-                        error_log('Не удалось сохранить анализ: ' . $e->getMessage());
+                        error_log('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р°РЅР°Р»РёР·: ' . $e->getMessage());
                     }
                 }
 
-                // Формируем HTML для вывода результатов в интерфейсе (как раньше, с модалами)
+                // Р¤РѕСЂРјРёСЂСѓРµРј HTML РґР»СЏ РІС‹РІРѕРґР° СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РІ РёРЅС‚РµСЂС„РµР№СЃРµ (РєР°Рє СЂР°РЅСЊС€Рµ, СЃ РјРѕРґР°Р»Р°РјРё)
                 if (!empty($matches)) {
-                    $search_html .= '<div class="mb-3"><h5>Найденные вакансии по вашему резюме:</h5>';
+                    $search_html .= '<div class="mb-3"><h5>РќР°Р№РґРµРЅРЅС‹Рµ РІР°РєР°РЅСЃРёРё РїРѕ РІР°С€РµРјСѓ СЂРµР·СЋРјРµ:</h5>';
                     foreach ($matches as $m) {
                         $id = isset($m['id']) ? (int)$m['id'] : 0;
-                        $title_raw = $m['title'] ?? 'Без названия';
+                        $title_raw = $m['title'] ?? 'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ';
                         $company_raw = $m['company'] ?? '-';
                         $category_raw = $m['category'] ?? '-';
                         $desc_raw = $m['description'] ?? '';
@@ -244,37 +244,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                         $search_html .= '  <div class="card-body d-flex flex-column flex-sm-row justify-content-between align-items-start">';
                         $search_html .= '    <div>';
                         $search_html .= "      <h6 class=\"mb-1 fw-bold\">{$title}</h6>";
-                        $search_html .= "      <p class=\"mb-1\"><strong>Компания:</strong> {$company}</p>";
-                        $search_html .= "      <p class=\"mb-1\"><strong>Категория:</strong> {$category}</p>";
+                        $search_html .= "      <p class=\"mb-1\"><strong>РљРѕРјРїР°РЅРёСЏ:</strong> {$company}</p>";
+                        $search_html .= "      <p class=\"mb-1\"><strong>РљР°С‚РµРіРѕСЂРёСЏ:</strong> {$category}</p>";
                         $search_html .= "      <p class=\"mb-0 text-muted\">{$desc_short}</p>";
                         $search_html .= '    </div>';
                         $search_html .= '    <div class="mt-3 mt-sm-0">';
-                        $search_html .= "      <button type=\"button\" class=\"btn btn-outline-primary btn-sm\" data-bs-toggle=\"modal\" data-bs-target=\"#{$modalId}\" data-bs-id=\"{$id}\" data-bs-title=\"{$title}\">Открыть</button>";
+                        $search_html .= "      <button type=\"button\" class=\"btn btn-outline-primary btn-sm\" data-bs-toggle=\"modal\" data-bs-target=\"#{$modalId}\" data-bs-id=\"{$id}\" data-bs-title=\"{$title}\">РћС‚РєСЂС‹С‚СЊ</button>";
                         $search_html .= '    </div>';
                         $search_html .= '  </div>';
                         $search_html .= '</div>';
 
-                        // модальное окно
+                        // РјРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ
                         $search_html .= '<div class="modal fade" id="' . $modalId . '" tabindex="-1" aria-hidden="true">';
                         $search_html .= '  <div class="modal-dialog">';
                         $formAction = htmlspecialchars($basePath . '/process_application.php');
                         $search_html .= '    <form action="' . $formAction . '" method="POST" class="modal-content">';
                         $search_html .= '      <input type="hidden" name="vacancy_id" value="' . $id . '">';
                         $search_html .= '      <div class="modal-header">';
-                        $search_html .= '        <h5 class="modal-title">Развернуть</h5>';
+                        $search_html .= '        <h5 class="modal-title">Р Р°Р·РІРµСЂРЅСѓС‚СЊ</h5>';
                         $search_html .= '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>';
                         $search_html .= '      </div>';
                         $search_html .= '      <div class="modal-body">';
-                        $search_html .= '        <p>Откликнуться на вакансию «<strong>' . $title . '</strong>»?</p>';
+                        $search_html .= '        <p>РћС‚РєР»РёРєРЅСѓС‚СЊСЃСЏ РЅР° РІР°РєР°РЅСЃРёСЋ В«<strong>' . $title . '</strong>В»?</p>';
                         $search_html .= '        <hr>';
-                        $search_html .= '        <p><strong>Описание вакансии:</strong></p>';
+                        $search_html .= '        <p><strong>РћРїРёСЃР°РЅРёРµ РІР°РєР°РЅСЃРёРё:</strong></p>';
                         $search_html .= '        <p>' . nl2br(htmlspecialchars($desc_raw)) . '</p>';
-                        $search_html .= '        <p><strong>Компания:</strong> ' . $company . '</p>';
-                        $search_html .= '        <p><strong>Местоположение:</strong> ' . (isset($m['location']) ? htmlspecialchars($m['location'], ENT_QUOTES) : '-') . '</p>';
+                        $search_html .= '        <p><strong>РљРѕРјРїР°РЅРёСЏ:</strong> ' . $company . '</p>';
+                        $search_html .= '        <p><strong>РњРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ:</strong> ' . (isset($m['location']) ? htmlspecialchars($m['location'], ENT_QUOTES) : '-') . '</p>';
                         $search_html .= '      </div>';
                         $search_html .= '      <div class="modal-footer">';
-                        $search_html .= '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-                        $search_html .= '        <button type="submit" class="btn btn-primary">Откликнуться</button>';
+                        $search_html .= '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">РћС‚РјРµРЅР°</button>';
+                        $search_html .= '        <button type="submit" class="btn btn-primary">РћС‚РєР»РёРєРЅСѓС‚СЊСЃСЏ</button>';
                         $search_html .= '      </div>';
                         $search_html .= '    </form>';
                         $search_html .= '  </div>';
@@ -282,26 +282,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
                     }
                     $search_html .= '</div>';
                 } else {
-                    $search_html .= '<div class="alert alert-info mt-3">По результатам автоматического поиска совпадений не найдено. Попробуйте загрузить резюме в другом формате или проверьте, что в базе есть вакансии.</div>';
+                    $search_html .= '<div class="alert alert-info mt-3">РџРѕ СЂРµР·СѓР»СЊС‚Р°С‚Р°Рј Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РїРѕРёСЃРєР° СЃРѕРІРїР°РґРµРЅРёР№ РЅРµ РЅР°Р№РґРµРЅРѕ. РџРѕРїСЂРѕР±СѓР№С‚Рµ Р·Р°РіСЂСѓР·РёС‚СЊ СЂРµР·СЋРјРµ РІ РґСЂСѓРіРѕРј С„РѕСЂРјР°С‚Рµ РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ, С‡С‚Рѕ РІ Р±Р°Р·Рµ РµСЃС‚СЊ РІР°РєР°РЅСЃРёРё.</div>';
                 }
 
-                // показать ключевые слова (полезно)
+                // РїРѕРєР°Р·Р°С‚СЊ РєР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР° (РїРѕР»РµР·РЅРѕ)
                 if (!empty($keywords)) {
-                    $search_html .= '<div class="mt-2"><small class="text-muted">Ключевые слова: '.htmlspecialchars(implode(', ', $keywords)).'</small></div>';
+                    $search_html .= '<div class="mt-2"><small class="text-muted">РљР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР°: '.htmlspecialchars(implode(', ', $keywords)).'</small></div>';
                 }
 
-                // Сохраняем в сессии как fallback (удобно)
+                // РЎРѕС…СЂР°РЅСЏРµРј РІ СЃРµСЃСЃРёРё РєР°Рє fallback (СѓРґРѕР±РЅРѕ)
                 $_SESSION['smart_search_html'] = $search_html;
                 $_SESSION['smart_search_success'] = $success;
 
             } else {
-                $errors[] = 'Не удалось сохранить файл на сервере.';
+                $errors[] = 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ С„Р°Р№Р» РЅР° СЃРµСЂРІРµСЂРµ.';
             }
         }
     }
 }
 
-// --- Подгрузка истории анализов текущего пользователя ---
+// --- РџРѕРґРіСЂСѓР·РєР° РёСЃС‚РѕСЂРёРё Р°РЅР°Р»РёР·РѕРІ С‚РµРєСѓС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ ---
 $myAnalyses = [];
 if ($myId) {
     try {
@@ -309,12 +309,12 @@ if ($myId) {
         $hStmt->execute([$myId]);
         $myAnalyses = $hStmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        // игнорируем ошибки чтения истории, но логируем
-        error_log('Ошибка получения истории анализов: ' . $e->getMessage());
+        // РёРіРЅРѕСЂРёСЂСѓРµРј РѕС€РёР±РєРё С‡С‚РµРЅРёСЏ РёСЃС‚РѕСЂРёРё, РЅРѕ Р»РѕРіРёСЂСѓРµРј
+        error_log('РћС€РёР±РєР° РїРѕР»СѓС‡РµРЅРёСЏ РёСЃС‚РѕСЂРёРё Р°РЅР°Р»РёР·РѕРІ: ' . $e->getMessage());
     }
 }
 
-// --- Просмотр конкретного анализа (GET ?analysis_id=...) ---
+// --- РџСЂРѕСЃРјРѕС‚СЂ РєРѕРЅРєСЂРµС‚РЅРѕРіРѕ Р°РЅР°Р»РёР·Р° (GET ?analysis_id=...) ---
 if (isset($_GET['analysis_id']) && $myId) {
     $aid = (int)$_GET['analysis_id'];
     $aStmt = $pdo->prepare("SELECT * FROM analyses WHERE id = ? AND user_id = ? LIMIT 1");
@@ -322,29 +322,29 @@ if (isset($_GET['analysis_id']) && $myId) {
     $aRow = $aStmt->fetch(PDO::FETCH_ASSOC);
     if ($aRow) {
         $search_html = '<div class="card mb-4"><div class="card-body">';
-        $search_html .= '<h5>Результаты анализа от ' . htmlspecialchars($aRow['created_at']) . '</h5>';
-        $search_html .= '<p><strong>Резюме:</strong> ' . htmlspecialchars($aRow['resume_original']) . '</p>';
-        $search_html .= '<p><strong>Ключевые слова:</strong> ' . htmlspecialchars($aRow['keywords']) . '</p>';
+        $search_html .= '<h5>Р РµР·СѓР»СЊС‚Р°С‚С‹ Р°РЅР°Р»РёР·Р° РѕС‚ ' . htmlspecialchars($aRow['created_at']) . '</h5>';
+        $search_html .= '<p><strong>Р РµР·СЋРјРµ:</strong> ' . htmlspecialchars($aRow['resume_original']) . '</p>';
+        $search_html .= '<p><strong>РљР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР°:</strong> ' . htmlspecialchars($aRow['keywords']) . '</p>';
         $matches_prev = json_decode($aRow['matches_json'], true) ?: [];
         if (!empty($matches_prev)) {
             foreach ($matches_prev as $m) {
                 $search_html .= '<div class="card mb-2"><div class="card-body d-flex justify-content-between">';
-                $search_html .= '<div><strong>' . htmlspecialchars($m['title']) . '</strong><div class="text-muted">' . htmlspecialchars($m['company']) . ' — ' . htmlspecialchars($m['category']) . '</div>';
+                $search_html .= '<div><strong>' . htmlspecialchars($m['title']) . '</strong><div class="text-muted">' . htmlspecialchars($m['company']) . ' вЂ” ' . htmlspecialchars($m['category']) . '</div>';
                 $search_html .= '<div class="text-muted small mt-1">' . htmlspecialchars($m['excerpt']) . '</div></div>';
-                $search_html .= '<div><a class="btn btn-outline-primary btn-sm" href="' . htmlspecialchars($basePath . '/vacancy.php?id=' . (int)$m['id']) . '">Открыть</a></div>';
+                $search_html .= '<div><a class="btn btn-outline-primary btn-sm" href="' . htmlspecialchars($basePath . '/vacancy.php?id=' . (int)$m['id']) . '">РћС‚РєСЂС‹С‚СЊ</a></div>';
                 $search_html .= '</div></div>';
             }
         } else {
-            $search_html .= '<div class="alert alert-info">Совпадений тогда не было.</div>';
+            $search_html .= '<div class="alert alert-info">РЎРѕРІРїР°РґРµРЅРёР№ С‚РѕРіРґР° РЅРµ Р±С‹Р»Рѕ.</div>';
         }
         $search_html .= '</div></div>';
     } else {
-        $search_html = '<div class="alert alert-warning">Анализ не найден или доступ к нему запрещён.</div>';
+        $search_html = '<div class="alert alert-warning">РђРЅР°Р»РёР· РЅРµ РЅР°Р№РґРµРЅ РёР»Рё РґРѕСЃС‚СѓРї Рє РЅРµРјСѓ Р·Р°РїСЂРµС‰С‘РЅ.</div>';
     }
 }
 
 // ------------------------
-// HTML: вывод страницы
+// HTML: РІС‹РІРѕРґ СЃС‚СЂР°РЅРёС†С‹
 // ------------------------
 ?>
 <!DOCTYPE html>
@@ -361,7 +361,7 @@ if (isset($_GET['analysis_id']) && $myId) {
 </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TruWork — Умный поиск</title>
+  <title>TruWork вЂ” РЈРјРЅС‹Р№ РїРѕРёСЃРє</title>
   <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.ico" />
@@ -450,50 +450,27 @@ if (isset($_GET['analysis_id']) && $myId) {
   <header class="site-header">
     <div class="site-shell site-header__inner">
       <a class="brand" href="index.php"><img src="logo2.png" alt="TruWork"></a>
-      <nav class="site-nav" aria-label="Основная навигация">
-        <a href="index.php">Главная</a>
-        <a href="vacancies.php">Вакансии</a>
-        <a href="vacancy.php">Опубликовать</a>
-        <a href="support.html">Поддержка</a>
-        <a href="smart_search.php" class="is-active">Умный поиск</a>
+      <nav class="site-nav" aria-label="РћСЃРЅРѕРІРЅР°СЏ РЅР°РІРёРіР°С†РёСЏ">
+        <a href="index.php">Р“Р»Р°РІРЅР°СЏ</a>
+        <a href="vacancies.php">Р’Р°РєР°РЅСЃРёРё</a>
+        <a href="vacancy.php">РћРїСѓР±Р»РёРєРѕРІР°С‚СЊ</a>
+        <a href="faq.html">FAQ</a>
+        <a href="support.html">РџРѕРґРґРµСЂР¶РєР°</a>
+        <a href="smart_search.php" class="is-active">РЈРјРЅС‹Р№ РїРѕРёСЃРє</a>
       </nav>
       <div class="header-actions">
         <?php if(isset($_COOKIE['user'])): ?>
           <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
         <?php else: ?>
-          <a class="button-primary" href="login.html">Войти</a>
+          <a class="button-primary" href="login.html">Р’РѕР№С‚Рё</a>
         <?php endif; ?>
       </div>
     </div>
   </header>
-  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
-    <div class="container">
-      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.php">
-        <img src="logo2.png" alt="TruWork" width="95" class="me-2">
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-          <li class="nav-item"><a class="nav-link active" href="vacancies.php"><span class="nav-link-border"></span>Найти работу</a></li>
-          <li class="nav-item"><a class="nav-link" href="vacancy.php"><span class="nav-link-border"></span>Опубликовать</a></li>
-          <li class="nav-item"><a class="nav-link" href="dashboard.php"><span class="nav-link-border"></span>Панель</a></li>
-          <li class="nav-item"><a class="nav-link" href="discovery.php"><span class="nav-link-border"></span>Обзор</a></li>
-        </ul>
-        <?php if(isset($_COOKIE['user'])): ?>
-          <a href="profile.php" class="btn btn-outline-primary ms-3"><?= htmlspecialchars($_COOKIE['user']) ?></a>
-        <?php else: ?>
-          <a href="login.html" class="btn btn-primary ms-3">Войти</a>
-        <?php endif; ?>
-      </div>
-    </div>
-  </nav>
+    <main class="container py-5">
+    <h1 class="mb-4 fw-bold">РЈРјРЅС‹Р№ РїРѕРёСЃРє РІР°РєР°РЅСЃРёР№</h1>
 
-  <main class="container py-5">
-    <h1 class="mb-4 fw-bold">Умный поиск вакансий</h1>
-
-    <!-- Сообщения об ошибках / успехе -->
+    <!-- РЎРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… / СѓСЃРїРµС…Рµ -->
     <?php if (!empty($errors)): ?>
       <div class="alert alert-danger">
         <ul class="mb-0">
@@ -510,67 +487,67 @@ if (isset($_GET['analysis_id']) && $myId) {
 
     <div class="card mb-4 shadow-sm">
       <div class="card-body">
-        <p class="text-muted">Загрузите резюме в формате PDF / DOC / DOCX — мы проанализируем его и попытаемся найти подходящие вакансии.</p>
+        <p class="text-muted">Р—Р°РіСЂСѓР·РёС‚Рµ СЂРµР·СЋРјРµ РІ С„РѕСЂРјР°С‚Рµ PDF / DOC / DOCX вЂ” РјС‹ РїСЂРѕР°РЅР°Р»РёР·РёСЂСѓРµРј РµРіРѕ Рё РїРѕРїС‹С‚Р°РµРјСЃСЏ РЅР°Р№С‚Рё РїРѕРґС…РѕРґСЏС‰РёРµ РІР°РєР°РЅСЃРёРё.</p>
 
-        <form action="<?= htmlspecialchars($basePath . '/smart_search.php') ?>" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
-          <div class="col-md-8">
-            <label for="resume" class="form-label">Резюме (PDF, DOC, DOCX)</label>
+        <form action="<?= htmlspecialchars($basePath . '/smart_search.php') ?>" method="post" enctype="multipart/form-data" class="smart-upload">
+          <div>
+            <label for="resume" class="form-label">Р РµР·СЋРјРµ (PDF, DOC, DOCX)</label>
             <div class="input-group">
-              <label class="input-group-text btn btn-outline-secondary mb-0" for="resume" style="cursor:pointer;">Выбрать файл</label>
+              <label class="input-group-text btn btn-outline-secondary mb-0" for="resume" style="cursor:pointer;">Р’С‹Р±СЂР°С‚СЊ С„Р°Р№Р»</label>
               <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx,.txt" style="display:none;" />
-              <input id="file-name" class="form-control" readonly value="Файл не выбран" />
+              <input id="file-name" class="form-control" readonly value="Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ" />
             </div>
-            <div class="form-text">Максимальный размер: 5 МБ.</div>
+            <div class="form-text">РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ: 5 РњР‘.</div>
             <div class="mt-3">
-            <a href="?clear=1" class="btn btn-outline-danger btn-sm">Очистить результаты</a>
+            <a href="?clear=1" class="btn btn-outline-danger btn-sm">РћС‡РёСЃС‚РёС‚СЊ СЂРµР·СѓР»СЊС‚Р°С‚С‹</a>
             </div>
 
           </div>
 
-          <div class="col-md-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary w-100 align-self-end">Отправить</button>
-            <button type="reset" id="reset-btn" class="btn btn-outline-secondary w-100 align-self-end">Очистить</button>
+          <div class="stack-actions" style="justify-content:flex-end;">
+            <button type="submit" class="btn btn-primary">РћС‚РїСЂР°РІРёС‚СЊ</button>
+            <button type="reset" id="reset-btn" class="btn btn-outline-secondary">РћС‡РёСЃС‚РёС‚СЊ</button>
           </div>
         </form>
 
         <hr>
 
-        <p class="small text-muted mb-0">Только авторизованные пользователи могут получить расширенный анализ. Если хотите — добавьте возможность прикреплять сопроводительное письмо позже.</p>
+        <p class="small text-muted mb-0">РўРѕР»СЊРєРѕ Р°РІС‚РѕСЂРёР·РѕРІР°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»Рё РјРѕРіСѓС‚ РїРѕР»СѓС‡РёС‚СЊ СЂР°СЃС€РёСЂРµРЅРЅС‹Р№ Р°РЅР°Р»РёР·. Р•СЃР»Рё С…РѕС‚РёС‚Рµ вЂ” РґРѕР±Р°РІСЊС‚Рµ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїСЂРёРєСЂРµРїР»СЏС‚СЊ СЃРѕРїСЂРѕРІРѕРґРёС‚РµР»СЊРЅРѕРµ РїРёСЃСЊРјРѕ РїРѕР·Р¶Рµ.</p>
       </div>
     </div>
 
-    <!-- История ваших анализов (если есть) -->
+    <!-- РСЃС‚РѕСЂРёСЏ РІР°С€РёС… Р°РЅР°Р»РёР·РѕРІ (РµСЃР»Рё РµСЃС‚СЊ) -->
     <?php if (!empty($myAnalyses)): ?>
       <div class="card mb-4">
         <div class="card-body">
-          <h5 class="mb-3">История ваших загрузок / анализов</h5>
+          <h5 class="mb-3">РСЃС‚РѕСЂРёСЏ РІР°С€РёС… Р·Р°РіСЂСѓР·РѕРє / Р°РЅР°Р»РёР·РѕРІ</h5>
           <?php foreach ($myAnalyses as $a):
             $matches_preview = json_decode($a['matches_json'], true);
           ?>
             <div class="mb-3 border rounded p-3">
-              <div class="d-flex justify-content-between align-items-start">
+              <div class="smart-history-item">
                 <div>
                   <strong><?= htmlspecialchars($a['resume_original']) ?></strong>
-                  <div class="text-muted small">Дата: <?= htmlspecialchars($a['created_at']) ?></div>
-                  <div class="text-muted small">Ключевые слова: <?= htmlspecialchars($a['keywords']) ?></div>
+                  <div class="text-muted small">Р”Р°С‚Р°: <?= htmlspecialchars($a['created_at']) ?></div>
+                  <div class="text-muted small">РљР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР°: <?= htmlspecialchars($a['keywords']) ?></div>
                 </div>
-                <div class="text-end">
-                  <a href="<?= htmlspecialchars($basePath . '/uploads/resumes/' . $a['resume_filename']) ?>" class="btn btn-sm btn-outline-secondary" target="_blank">Скачать</a>
-                  <a href="<?= htmlspecialchars($basePath . '/smart_search.php?analysis_id=' . (int)$a['id']) ?>" class="btn btn-sm btn-primary">Посмотреть</a>
+                <div class="smart-history-actions">
+                  <a href="<?= htmlspecialchars($basePath . '/uploads/resumes/' . $a['resume_filename']) ?>" class="btn btn-sm btn-outline-secondary" target="_blank">РЎРєР°С‡Р°С‚СЊ</a>
+                  <a href="<?= htmlspecialchars($basePath . '/smart_search.php?analysis_id=' . (int)$a['id']) ?>" class="btn btn-sm btn-primary">РџРѕСЃРјРѕС‚СЂРµС‚СЊ</a>
 
-                  <form action="<?= htmlspecialchars($basePath . '/smart_search.php') ?>" method="post" class="d-inline-block ms-1" onsubmit="return confirm('Удалить этот анализ?');">
+                  <form action="<?= htmlspecialchars($basePath . '/smart_search.php') ?>" method="post" onsubmit="return confirm('РЈРґР°Р»РёС‚СЊ СЌС‚РѕС‚ Р°РЅР°Р»РёР·?');">
                     <input type="hidden" name="delete_analysis_id" value="<?= (int)$a['id'] ?>">
-                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                    <button type="submit" class="btn btn-sm btn-danger">РЈРґР°Р»РёС‚СЊ</button>
                   </form>
                 </div>
               </div>
 
               <?php if (!empty($matches_preview)): ?>
                 <div class="mt-2">
-                  <small class="text-muted">Превью найденных вакансий:</small>
+                  <small class="text-muted">РџСЂРµРІСЊСЋ РЅР°Р№РґРµРЅРЅС‹С… РІР°РєР°РЅСЃРёР№:</small>
                   <ul class="mb-0">
                     <?php foreach (array_slice($matches_preview, 0, 3) as $mp): ?>
-                      <li><?= htmlspecialchars($mp['title']) ?> — <?= htmlspecialchars($mp['company']) ?></li>
+                      <li><?= htmlspecialchars($mp['title']) ?> вЂ” <?= htmlspecialchars($mp['company']) ?></li>
                     <?php endforeach; ?>
                   </ul>
                 </div>
@@ -581,25 +558,25 @@ if (isset($_GET['analysis_id']) && $myId) {
       </div>
     <?php endif; ?>
 
-    <!-- Здесь выводим результаты автоматического поиска (или просмотр анализов) -->
+    <!-- Р—РґРµСЃСЊ РІС‹РІРѕРґРёРј СЂРµР·СѓР»СЊС‚Р°С‚С‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РїРѕРёСЃРєР° (РёР»Рё РїСЂРѕСЃРјРѕС‚СЂ Р°РЅР°Р»РёР·РѕРІ) -->
     <?= $search_html ?: $session_search_html ?>
 
   </main>
 
   <footer class="bg-light border-top py-4 mt-5">
-    <div class="container text-center text-muted">&copy; <?= date('Y') ?> TruWork. Все права защищены.</div>
+    <div class="container text-center text-muted">&copy; <?= date('Y') ?> TruWork. Р’СЃРµ РїСЂР°РІР° Р·Р°С‰РёС‰РµРЅС‹.</div>
   </footer>
 
   <footer class="site-footer">
     <div class="site-shell site-footer__panel">
       <div>
         <strong>TruWork</strong>
-        <div class="footer-note">Умный поиск вакансий и история анализов в едином стиле.</div>
+        <div class="footer-note">РЈРјРЅС‹Р№ РїРѕРёСЃРє РІР°РєР°РЅСЃРёР№ Рё РёСЃС‚РѕСЂРёСЏ Р°РЅР°Р»РёР·РѕРІ РІ РµРґРёРЅРѕРј СЃС‚РёР»Рµ.</div>
       </div>
       <div class="footer-links">
-        <a href="policy.html">Политика конфиденциальности</a>
-        <a href="terms.html">Условия использования</a>
-        <a href="support.html">Поддержка</a>
+        <a href="policy.html">РџРѕР»РёС‚РёРєР° РєРѕРЅС„РёРґРµРЅС†РёР°Р»СЊРЅРѕСЃС‚Рё</a>
+        <a href="terms.html">РЈСЃР»РѕРІРёСЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ</a>
+        <a href="support.html">РџРѕРґРґРµСЂР¶РєР°</a>
       </div>
     </div>
   </footer>
@@ -614,7 +591,7 @@ if (isset($_GET['analysis_id']) && $myId) {
       if(fileInput){
         fileInput.addEventListener('change', function(){
           if(!this.files || this.files.length === 0){
-            fileName.value = 'Файл не выбран';
+            fileName.value = 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ';
             return;
           }
           fileName.value = this.files[0].name;
@@ -622,7 +599,7 @@ if (isset($_GET['analysis_id']) && $myId) {
       }
       if(resetBtn){
         resetBtn.addEventListener('click', function(){
-          fileName.value = 'Файл не выбран';
+          fileName.value = 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ';
           if(fileInput){ fileInput.value = ''; }
         });
       }
@@ -630,3 +607,5 @@ if (isset($_GET['analysis_id']) && $myId) {
   </script>
 </body>
 </html>
+
+
