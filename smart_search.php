@@ -297,7 +297,6 @@ $t = [
         <a href="<?= $isKz ? 'vacancy_kk.php' : 'vacancy.php' ?>"><?= htmlspecialchars($t['publish']) ?></a>
         <a href="<?= $isKz ? 'faq_kk.html' : 'faq.html' ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= $isKz ? 'support_kk.html' : 'support.html' ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= $isKz ? 'smart_search_kk.php' : 'smart_search.php' ?>" class="is-active"><?= htmlspecialchars($t['title']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
