@@ -300,12 +300,12 @@ $paths = [
       <aside class="dashboard-sidebar">
         <h2 class="sidebar-title"><?= htmlspecialchars($t['account']) ?></h2>
         <nav class="sidebar-nav">
-          <a class="is-active" href="<?= htmlspecialchars($paths['profile']) ?><?= !$isOwner ? '?user=' . urlencode($username) : '' ?>"><span><?= htmlspecialchars($t['profile']) ?></span><span>01</span></a>
+          <a class="is-active" href="<?= htmlspecialchars($paths['profile']) ?><?= !$isOwner ? '?user=' . urlencode($username) : '' ?>"><?= htmlspecialchars($t['profile']) ?></a>
           <?php if ($isOwner): ?>
-            <a href="<?= htmlspecialchars($paths['settings']) ?>"><span><?= htmlspecialchars($t['settings']) ?></span><span>02</span></a>
-            <a href="<?= htmlspecialchars($paths['security']) ?>"><span><?= htmlspecialchars($t['security']) ?></span><span>03</span></a>
-            <a href="<?= htmlspecialchars($paths['tests']) ?>"><span><?= htmlspecialchars($t['skills']) ?></span><span>04</span></a>
-            <a href="logout.php"><span><?= htmlspecialchars($t['logout']) ?></span><span>05</span></a>
+            <a href="<?= htmlspecialchars($paths['settings']) ?>"><?= htmlspecialchars($t['settings']) ?></a>
+            <a href="<?= htmlspecialchars($paths['security']) ?>"><?= htmlspecialchars($t['security']) ?></a>
+            <a href="<?= htmlspecialchars($paths['tests']) ?>"><?= htmlspecialchars($t['skills']) ?></a>
+            <a href="logout.php"><?= htmlspecialchars($t['logout']) ?></a>
           <?php endif; ?>
         </nav>
       </aside>
@@ -318,10 +318,9 @@ $paths = [
             <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
           </div>
           <?php if ($isOwner): ?>
-            <form method="post" enctype="multipart/form-data" class="stack-actions">
-              <label class="button-secondary" for="avatar"><?= htmlspecialchars($t['change_avatar']) ?></label>
+            <form method="post" enctype="multipart/form-data" class="stack-actions" id="avatar-form">
+              <label class="button-primary" for="avatar"><?= htmlspecialchars($t['change_avatar']) ?></label>
               <input id="avatar" type="file" name="avatar" accept="image/*" hidden>
-              <button class="button-primary" type="submit"><?= htmlspecialchars($t['upload']) ?></button>
             </form>
           <?php endif; ?>
         </div>
@@ -390,5 +389,21 @@ $paths = [
       </div>
     </div>
   </footer>
+  <?php if ($isOwner): ?>
+    <script>
+      (function () {
+        var input = document.getElementById('avatar');
+        var form = document.getElementById('avatar-form');
+        if (!input || !form) {
+          return;
+        }
+        input.addEventListener('change', function () {
+          if (input.files && input.files.length > 0) {
+            form.submit();
+          }
+        });
+      }());
+    </script>
+  <?php endif; ?>
 </body>
 </html>

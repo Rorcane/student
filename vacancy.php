@@ -16,6 +16,7 @@ $t = [
     'page_title' => $isKz ? 'Вакансия жариялау | TruWork' : 'Публикация вакансии | TruWork',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
+    'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
     'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
@@ -33,21 +34,22 @@ $t = [
     'location_placeholder' => $isKz ? 'Қала немесе қашықтан' : 'Город или удаленно',
     'description' => $isKz ? 'Сипаттама' : 'Описание',
     'description_placeholder' => $isKz ? 'Міндеттерді, талаптарды және жұмыс шарттарын жазыңыз' : 'Опишите обязанности, требования и условия работы',
-    'submit' => $isKz ? 'Вакансияны жариялау' : 'Опубликовать вакансию',
-    'policy' => $isKz ? 'Құпиялылық саясаты' : 'Политика конфиденциальности',
+    'submit' => $isKz ? 'Вакансияны жариялау' : 'Опубликовать',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
-    'login' => $isKz ? 'Кіру' : 'Войти',
+    'footer_note' => $isKz ? 'Жаңа вакансияларды ықшам әрі түсінікті түрде жариялау.' : 'Аккуратная публикация новых вакансий в едином стиле.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
+    'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
     'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
-    'login' => $isKz ? 'login_kk.html' : 'login.html',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+    'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
 ];
 ?>
 <!DOCTYPE html>
@@ -73,17 +75,22 @@ $paths = [
       <nav class="site-nav" aria-label="<?= $isKz ? 'Негізгі навигация' : 'Основная навигация' ?>">
         <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
         <a href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['vacancies']) ?></a>
-        <a href="vacancy.php" class="is-active"><?= htmlspecialchars($t['submit']) ?></a>
+        <a href="<?= htmlspecialchars($paths['publish']) ?>" class="is-active"><?= htmlspecialchars($t['publish']) ?></a>
         <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
       </nav>
       <div class="header-actions">
-        <?php if (isset($_COOKIE['user'])): ?>
-          <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
-        <?php else: ?>
-          <a class="button-primary" href="<?= htmlspecialchars($paths['login']) ?>"><?= htmlspecialchars($t['login']) ?></a>
-        <?php endif; ?>
+        <div class="lang-switch">
+          <?php if ($isKz): ?>
+            <a href="vacancy.php">RU</a>
+            <span class="is-active">KZ</span>
+          <?php else: ?>
+            <span class="is-active">RU</span>
+            <a href="vacancy_kk.php">KZ</a>
+          <?php endif; ?>
+        </div>
+        <a class="button-primary" href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars($_COOKIE['user']) ?></a>
       </div>
     </div>
   </header>
@@ -141,7 +148,7 @@ $paths = [
     <div class="site-shell site-footer__panel">
       <div>
         <strong>TruWork</strong>
-        <div class="footer-note"><?= $isKz ? 'Жаңа вакансияларды ұқыпты және түсінікті түрде жариялау.' : 'Аккуратная публикация новых вакансий в едином стиле.' ?></div>
+        <div class="footer-note"><?= htmlspecialchars($t['footer_note']) ?></div>
       </div>
       <div class="footer-links">
         <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>

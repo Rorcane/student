@@ -1,7 +1,8 @@
 <?php
 require_once 'config.php';
 
-function plural_form(int $n, array $forms): string {
+function plural_form(int $n, array $forms): string
+{
     $n = abs($n) % 100;
     $n1 = $n % 10;
     if ($n > 10 && $n < 20) {
@@ -19,70 +20,55 @@ function plural_form(int $n, array $forms): string {
 $lang = $siteLang ?? 'ru';
 $isKz = $lang === 'kk';
 
-$title_filter = isset($_GET['title']) ? trim((string) $_GET['title']) : '';
-$company_filter = isset($_GET['company']) ? trim((string) $_GET['company']) : '';
-
-$selectedCategories = [];
-if (isset($_GET['category'])) {
-    if (is_array($_GET['category'])) {
-        $selectedCategories = array_map('trim', $_GET['category']);
-    } else {
-        $selectedCategories = [trim((string) $_GET['category'])];
-    }
-}
-if (empty($selectedCategories) && isset($_GET['category[]']) && is_array($_GET['category[]'])) {
-    $selectedCategories = array_map('trim', $_GET['category[]']);
-}
-
-$selectedCategories = array_values(array_filter($selectedCategories, static function ($value) {
-    return $value !== '' && $value !== null;
-}));
+$titleFilter = trim((string) ($_GET['title'] ?? ''));
+$companyFilter = trim((string) ($_GET['company'] ?? ''));
+$categoryFilter = trim((string) ($_GET['category'] ?? ''));
+$sort = trim((string) ($_GET['sort'] ?? 'newest'));
 
 $limit = 15;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
-$categories = [];
-try {
-    $catStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
-    $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $categories = [];
+$categoriesStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC");
+$categories = $categoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$orderBy = 'v.created_at DESC';
+if ($sort === 'oldest') {
+    $orderBy = 'v.created_at ASC';
+} elseif ($sort === 'company') {
+    $orderBy = 'v.company ASC';
+} elseif ($sort === 'title') {
+    $orderBy = 'v.title ASC';
 }
 
+$conditions = [];
 $params = [];
+
+if ($titleFilter !== '') {
+    $conditions[] = 'v.title LIKE :title';
+    $params[':title'] = '%' . $titleFilter . '%';
+}
+if ($companyFilter !== '') {
+    $conditions[] = 'v.company LIKE :company';
+    $params[':company'] = '%' . $companyFilter . '%';
+}
+if ($categoryFilter !== '') {
+    $conditions[] = 'v.category_id = :category';
+    $params[':category'] = $categoryFilter;
+}
+
+$whereSql = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+
 $sql = "
-    SELECT v.*, c.name AS category_name, COUNT(a.id) AS responses
+    SELECT v.*, c.name AS category_name
       FROM vacancies v
- LEFT JOIN categories c ON v.category_id = c.id
- LEFT JOIN applications a ON a.vacancy_id = v.id
-     WHERE 1=1
+ LEFT JOIN categories c ON c.id = v.category_id
+    {$whereSql}
+  ORDER BY {$orderBy}
+     LIMIT {$limit}
+    OFFSET {$offset}
 ";
 
-if ($title_filter !== '') {
-    $sql .= " AND v.title LIKE :title";
-    $params[':title'] = '%' . $title_filter . '%';
-}
-if ($company_filter !== '') {
-    $sql .= " AND v.company LIKE :company";
-    $params[':company'] = '%' . $company_filter . '%';
-}
-if (!empty($selectedCategories)) {
-    if (count($selectedCategories) === 1) {
-        $sql .= " AND v.category_id = :category";
-        $params[':category'] = $selectedCategories[0];
-    } else {
-        $holders = [];
-        foreach ($selectedCategories as $i => $cat) {
-            $ph = ':cat' . $i;
-            $holders[] = $ph;
-            $params[$ph] = $cat;
-        }
-        $sql .= ' AND v.category_id IN (' . implode(',', $holders) . ')';
-    }
-}
-
-$sql .= " GROUP BY v.id ORDER BY v.created_at DESC LIMIT {$limit} OFFSET {$offset}";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -90,48 +76,12 @@ $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $countSql = "
     SELECT COUNT(*)
       FROM vacancies v
- LEFT JOIN categories c ON v.category_id = c.id
-     WHERE 1=1
+    {$whereSql}
 ";
-$countParams = [];
-if ($title_filter !== '') {
-    $countSql .= " AND v.title LIKE :title";
-    $countParams[':title'] = '%' . $title_filter . '%';
-}
-if ($company_filter !== '') {
-    $countSql .= " AND v.company LIKE :company";
-    $countParams[':company'] = '%' . $company_filter . '%';
-}
-if (!empty($selectedCategories)) {
-    if (count($selectedCategories) === 1) {
-        $countSql .= " AND v.category_id = :category";
-        $countParams[':category'] = $selectedCategories[0];
-    } else {
-        $holders = [];
-        foreach ($selectedCategories as $i => $cat) {
-            $ph = ':countcat' . $i;
-            $holders[] = $ph;
-            $countParams[$ph] = $cat;
-        }
-        $countSql .= ' AND v.category_id IN (' . implode(',', $holders) . ')';
-    }
-}
 $countStmt = $pdo->prepare($countSql);
-$countStmt->execute($countParams);
+$countStmt->execute($params);
 $totalVacancies = (int) $countStmt->fetchColumn();
-$totalPages = (int) ceil($totalVacancies / $limit);
-
-$user = null;
-if (isset($_COOKIE['user'])) {
-    $uStmt = $pdo->prepare("SELECT role FROM users WHERE username = ?");
-    $uStmt->execute([$_COOKIE['user']]);
-    $user = $uStmt->fetch(PDO::FETCH_ASSOC);
-}
-
-$categoryNames = [];
-foreach ($categories as $categoryRow) {
-    $categoryNames[(string) $categoryRow['id']] = $categoryRow['name'];
-}
+$totalPages = max(1, (int) ceil($totalVacancies / $limit));
 
 $t = [
     'page_title' => $isKz ? 'TruWork - вакансиялар' : 'TruWork - вакансии',
@@ -142,49 +92,48 @@ $t = [
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'login' => $isKz ? 'Кіру' : 'Войти',
-    'title' => $isKz ? 'Вакансияларды табу' : 'Найти вакансию',
-    'subtitle' => $isKz ? 'Іздеу мен сүзгілерді пайдаланып, өзіңізге лайық ұсынысты табыңыз.' : 'Используйте поиск и фильтры, чтобы быстро найти подходящее предложение.',
+    'title' => $isKz ? 'Жаңа вакансияларды табу' : 'Найти актуальные вакансии',
+    'subtitle' => $isKz ? 'Іздеу, компания және санат бойынша сүзгілеп, жаңа ұсыныстарды HH стиліне жақын карточкаларда қараңыз.' : 'Фильтруйте по названию, компании и категории и просматривайте свежие вакансии в более реалистичных карточках.',
     'title_placeholder' => $isKz ? 'Лауазым атауы' : 'Название должности',
     'company_placeholder' => $isKz ? 'Компания' : 'Компания',
     'all_categories' => $isKz ? 'Барлық санаттар' : 'Все категории',
-    'filter' => $isKz ? 'Сүзу' : 'Фильтровать',
-    'categories' => $isKz ? 'Санаттар' : 'Категории',
-    'search_categories' => $isKz ? 'Санатты іздеу...' : 'Поиск категории...',
-    'choose_categories' => $isKz ? 'Санаттарды таңдаңыз' : 'Выберите категории',
-    'clear' => $isKz ? 'Тазарту' : 'Очистить',
-    'cancel' => $isKz ? 'Бас тарту' : 'Отмена',
-    'apply' => $isKz ? 'Қолдану' : 'Применить',
-    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
+    'category' => $isKz ? 'Санат' : 'Категория',
+    'sort' => $isKz ? 'Сұрыптау' : 'Сортировка',
+    'sort_newest' => $isKz ? 'Алдымен жаңалары' : 'Сначала новые',
+    'sort_oldest' => $isKz ? 'Алдымен ескілері' : 'Сначала старые',
+    'sort_company' => $isKz ? 'Компания бойынша' : 'По компании',
+    'sort_title' => $isKz ? 'Атауы бойынша' : 'По названию',
+    'filter' => $isKz ? 'Қолдану' : 'Применить',
+    'reset' => $isKz ? 'Тазарту' : 'Очистить',
     'found' => $isKz ? 'Табылды' : 'Найдено',
     'vacancy_forms' => $isKz ? ['вакансия', 'вакансия', 'вакансия'] : ['вакансия', 'вакансии', 'вакансий'],
-    'company' => $isKz ? 'Компания' : 'Компания',
     'salary' => $isKz ? 'Жалақы' : 'Зарплата',
-    'category' => $isKz ? 'Санат' : 'Категория',
     'location' => $isKz ? 'Орналасқан жері' : 'Местоположение',
     'details' => $isKz ? 'Толығырақ' : 'Подробнее',
-    'delete' => $isKz ? 'Жою' : 'Удалить',
-    'confirm_delete' => $isKz ? 'Осы вакансияны шынымен жойғыңыз келе ме?' : 'Вы уверены, что хотите удалить вакансию?',
-    'respond' => $isKz ? 'Өтінім жіберу' : 'Откликнуться',
-    'respond_question' => $isKz ? '«%s» вакансиясына өтінім жібересіз бе?' : 'Откликнуться на вакансию «%s»?',
-    'description' => $isKz ? 'Сипаттама' : 'Описание',
-    'empty' => $isKz ? 'Вакансиялар табылмады.' : 'Вакансии не найдены.',
-    'footer_note' => $isKz ? 'Жұмыс іздеу мен қызметкер таңдауға арналған бірыңғай HR-платформа.' : 'Единая HR-платформа для поиска работы и подбора специалистов.',
-    'policy' => $isKz ? 'Құпиялылық саясаты' : 'Политика конфиденциальности',
+    'empty' => $isKz ? 'Сұраныс бойынша вакансия табылмады.' : 'По вашему запросу вакансии не найдены.',
+    'page' => $isKz ? 'Бет' : 'Страница',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+    'footer_note' => $isKz ? 'Жаңа әрі шынайырақ көрінетін вакансиялар таспасы.' : 'Лента вакансий в более реалистичном стиле с упором на новые предложения.',
 ];
 
 $paths = [
     'index' => $isKz ? 'index_kk.php' : 'index.php',
     'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
-    'about' => $isKz ? 'about_kk.html' : 'about.html',
     'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
     'login' => $isKz ? 'login_kk.html' : 'login.html',
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
-    'alt' => $isKz ? 'vacancies.php' : 'vacancies_kk.php',
 ];
+
+function page_link(int $page, array $params): string
+{
+    $params['page'] = $page;
+    return '?' . http_build_query($params);
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= $isKz ? 'kk' : 'ru' ?>">
@@ -200,8 +149,35 @@ $paths = [
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="css/public-site.css">
+  <style>
+    .vacancy-card {
+      display: grid;
+      gap: 18px;
+    }
+    .vacancy-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .vacancy-chip {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f2f7fd;
+      border: 1px solid #d8e2ee;
+      color: #4c5b70;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .pager {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -226,7 +202,7 @@ $paths = [
           <?php endif; ?>
         </div>
         <?php if (isset($_COOKIE['user'])): ?>
-          <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
+          <a class="button-primary" href="<?= $isKz ? 'profile_kk.php' : 'profile.php' ?>"><?= htmlspecialchars($_COOKIE['user']) ?></a>
         <?php else: ?>
           <a class="button-primary" href="<?= htmlspecialchars($paths['login']) ?>"><?= htmlspecialchars($t['login']) ?></a>
         <?php endif; ?>
@@ -240,46 +216,40 @@ $paths = [
         <h1 class="section-title"><?= htmlspecialchars($t['title']) ?></h1>
         <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
 
-        <form method="get" class="form-grid" action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>">
+        <form method="get" class="form-grid">
           <div>
-            <label class="label" for="filter-title"><?= htmlspecialchars($t['title_placeholder']) ?></label>
-            <input class="input" id="filter-title" type="text" name="title" value="<?= htmlspecialchars($title_filter) ?>" placeholder="<?= htmlspecialchars($t['title_placeholder']) ?>">
+            <label class="label" for="title"><?= htmlspecialchars($t['title']) ?></label>
+            <input class="input" id="title" type="text" name="title" value="<?= htmlspecialchars($titleFilter) ?>" placeholder="<?= htmlspecialchars($t['title_placeholder']) ?>">
           </div>
           <div>
-            <label class="label" for="filter-company"><?= htmlspecialchars($t['company_placeholder']) ?></label>
-            <input class="input" id="filter-company" type="text" name="company" value="<?= htmlspecialchars($company_filter) ?>" placeholder="<?= htmlspecialchars($t['company_placeholder']) ?>">
+            <label class="label" for="company"><?= htmlspecialchars($t['company_placeholder']) ?></label>
+            <input class="input" id="company" type="text" name="company" value="<?= htmlspecialchars($companyFilter) ?>" placeholder="<?= htmlspecialchars($t['company_placeholder']) ?>">
           </div>
           <div>
-            <label class="label" for="filter-category"><?= htmlspecialchars($t['category']) ?></label>
-            <select class="input" id="filter-category" name="category">
+            <label class="label" for="category"><?= htmlspecialchars($t['category']) ?></label>
+            <select class="input" id="category" name="category">
               <option value=""><?= htmlspecialchars($t['all_categories']) ?></option>
               <?php foreach ($categories as $category): ?>
-                <option value="<?= htmlspecialchars((string) $category['id']) ?>" <?= in_array((string) $category['id'], $selectedCategories, true) ? 'selected' : '' ?>>
+                <option value="<?= (int) $category['id'] ?>" <?= $categoryFilter === (string) $category['id'] ? 'selected' : '' ?>>
                   <?= htmlspecialchars($category['name']) ?>
                 </option>
               <?php endforeach; ?>
             </select>
           </div>
-          <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+          <div>
+            <label class="label" for="sort"><?= htmlspecialchars($t['sort']) ?></label>
+            <select class="input" id="sort" name="sort">
+              <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>><?= htmlspecialchars($t['sort_newest']) ?></option>
+              <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>><?= htmlspecialchars($t['sort_oldest']) ?></option>
+              <option value="company" <?= $sort === 'company' ? 'selected' : '' ?>><?= htmlspecialchars($t['sort_company']) ?></option>
+              <option value="title" <?= $sort === 'title' ? 'selected' : '' ?>><?= htmlspecialchars($t['sort_title']) ?></option>
+            </select>
+          </div>
+          <div class="stack-actions">
             <button class="button-primary" type="submit"><?= htmlspecialchars($t['filter']) ?></button>
-            <button class="button-secondary" type="button" data-bs-toggle="modal" data-bs-target="#catsModal"><?= htmlspecialchars($t['categories']) ?></button>
-            <?php if ($user && ($user['role'] ?? '') === 'admin'): ?>
-              <a class="button-secondary" href="smart_search.php"><?= htmlspecialchars($t['smart_search']) ?></a>
-            <?php endif; ?>
+            <a class="button-secondary" href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['reset']) ?></a>
           </div>
         </form>
-
-        <div style="margin-top:22px;">
-          <?php if (!empty($selectedCategories)): ?>
-            <?php foreach ($selectedCategories as $selectedCategory): ?>
-              <span class="button-secondary" style="padding:8px 14px;margin:0 8px 8px 0;cursor:default;">
-                <?= htmlspecialchars($categoryNames[(string) $selectedCategory] ?? (string) $selectedCategory) ?>
-              </span>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <span class="muted"><?= htmlspecialchars($t['all_categories']) ?></span>
-          <?php endif; ?>
-        </div>
       </section>
 
       <section class="page-card">
@@ -290,83 +260,43 @@ $paths = [
 
       <?php if ($vacancies): ?>
         <?php foreach ($vacancies as $vacancy): ?>
-          <section class="page-card">
-            <div class="grid grid-2" style="align-items:start;">
-              <div>
-                <h2 style="margin-bottom:14px;"><?= htmlspecialchars($vacancy['title'] ?? ($isKz ? 'Атаусыз' : 'Без названия')) ?></h2>
-                <p><strong><?= htmlspecialchars($t['company']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['company'] ?? '-')) ?></p>
-                <p><strong><?= htmlspecialchars($t['salary']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['salary'] ?? '-')) ?></p>
-                <p><strong><?= htmlspecialchars($t['category']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['category_name'] ?? '-')) ?></p>
-                <p><strong><?= htmlspecialchars($t['location']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['location'] ?? '-')) ?></p>
+          <section class="page-card vacancy-card">
+            <div class="dashboard-hero">
+              <div class="dashboard-hero__text">
+                <h2 style="margin:0 0 8px;"><?= htmlspecialchars((string) ($vacancy['title'] ?? '')) ?></h2>
+                <div class="muted"><?= htmlspecialchars((string) ($vacancy['company'] ?? '')) ?></div>
+                <div class="vacancy-meta">
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['salary']) ?>: <?= htmlspecialchars((string) ($vacancy['salary'] ?? 'Не указана')) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['location']) ?>: <?= htmlspecialchars((string) ($vacancy['location'] ?? 'Не указано')) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['category']) ?>: <?= htmlspecialchars((string) ($vacancy['category_name'] ?? 'Без категории')) ?></span>
+                </div>
+                <p class="muted" style="margin:0;">
+                  <?= htmlspecialchars(mb_strlen((string) ($vacancy['description'] ?? '')) > 260 ? mb_substr((string) $vacancy['description'], 0, 260) . '...' : (string) ($vacancy['description'] ?? '')) ?>
+                </p>
               </div>
-              <div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-                <button class="button-primary" type="button" data-bs-toggle="modal" data-bs-target="#applyModal-<?= (int) $vacancy['id'] ?>">
-                  <?= htmlspecialchars($t['details']) ?>
-                </button>
-                <?php if ($user && ($user['role'] ?? '') === 'admin'): ?>
-                  <a class="button-secondary" href="delete_vacancy.php?id=<?= (int) $vacancy['id'] ?>" onclick="return confirm('<?= htmlspecialchars($t['confirm_delete'], ENT_QUOTES) ?>');">
-                    <?= htmlspecialchars($t['delete']) ?>
-                  </a>
-                <?php endif; ?>
+              <div class="dashboard-hero__actions">
+                <a class="button-primary" href="search.php?id=<?= (int) $vacancy['id'] ?>"><?= htmlspecialchars($t['details']) ?></a>
               </div>
             </div>
           </section>
-
-          <div class="modal fade" id="applyModal-<?= (int) $vacancy['id'] ?>" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-              <form action="process_application.php" method="post" class="modal-content">
-                <input type="hidden" name="vacancy_id" value="<?= (int) $vacancy['id'] ?>">
-                <div class="modal-header">
-                  <h5 class="modal-title"><?= htmlspecialchars($t['details']) ?></h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($t['cancel']) ?>"></button>
-                </div>
-                <div class="modal-body">
-                  <p><?= htmlspecialchars(sprintf($t['respond_question'], (string) ($vacancy['title'] ?? ''))) ?></p>
-                  <hr>
-                  <p><strong><?= htmlspecialchars($t['description']) ?>:</strong></p>
-                  <p><?= nl2br(htmlspecialchars((string) ($vacancy['description'] ?? ''))) ?></p>
-                  <p><strong><?= htmlspecialchars($t['company']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['company'] ?? '-')) ?></p>
-                  <p><strong><?= htmlspecialchars($t['location']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['location'] ?? '-')) ?></p>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars($t['cancel']) ?></button>
-                  <button type="submit" class="btn btn-primary"><?= htmlspecialchars($t['respond']) ?></button>
-                </div>
-              </form>
-            </div>
-          </div>
         <?php endforeach; ?>
-
-        <?php if ($totalPages > 1): ?>
-          <section class="page-card">
-            <nav aria-label="pagination">
-              <ul class="pagination justify-content-center mb-0">
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                  <?php
-                  $queryParams = ['page' => $i];
-                  if ($title_filter !== '') {
-                      $queryParams['title'] = $title_filter;
-                  }
-                  if ($company_filter !== '') {
-                      $queryParams['company'] = $company_filter;
-                  }
-                  if (!empty($selectedCategories)) {
-                      $queryParams['category'] = $selectedCategories;
-                  }
-                  ?>
-                  <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                    <a class="page-link" href="?<?= htmlspecialchars(http_build_query($queryParams)) ?>"><?= $i ?></a>
-                  </li>
-                <?php endfor; ?>
-              </ul>
-            </nav>
-          </section>
-        <?php endif; ?>
       <?php else: ?>
         <section class="page-card">
-          <p style="margin:0;"><?= htmlspecialchars($t['empty']) ?></p>
+          <p class="section-subtitle" style="margin-bottom:0;"><?= htmlspecialchars($t['empty']) ?></p>
         </section>
       <?php endif; ?>
+
+      <section class="page-card">
+        <div class="pager">
+          <span class="muted"><?= htmlspecialchars($t['page']) ?> <?= $page ?> / <?= $totalPages ?></span>
+          <?php if ($page > 1): ?>
+            <a class="button-secondary" href="<?= htmlspecialchars(page_link($page - 1, $_GET)) ?>">←</a>
+          <?php endif; ?>
+          <?php if ($page < $totalPages): ?>
+            <a class="button-secondary" href="<?= htmlspecialchars(page_link($page + 1, $_GET)) ?>">→</a>
+          <?php endif; ?>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -383,65 +313,5 @@ $paths = [
       </div>
     </div>
   </footer>
-
-  <div class="modal fade" id="catsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <form id="catsForm" method="get" action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>">
-          <div class="modal-header">
-            <h5 class="modal-title"><?= htmlspecialchars($t['choose_categories']) ?></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($t['cancel']) ?>"></button>
-          </div>
-          <div class="modal-body">
-            <?php if ($title_filter !== ''): ?><input type="hidden" name="title" value="<?= htmlspecialchars($title_filter) ?>"><?php endif; ?>
-            <?php if ($company_filter !== ''): ?><input type="hidden" name="company" value="<?= htmlspecialchars($company_filter) ?>"><?php endif; ?>
-            <input id="catSearch" class="form-control mb-3" type="search" autocomplete="off" placeholder="<?= htmlspecialchars($t['search_categories']) ?>">
-            <div id="catsList" class="row" style="max-height:55vh;overflow:auto;">
-              <?php foreach ($categories as $category): ?>
-                <div class="col-6 col-md-4 mb-2 cat-item">
-                  <div class="form-check">
-                    <input class="form-check-input cat-checkbox" type="checkbox" name="category[]" value="<?= htmlspecialchars((string) $category['id']) ?>" id="cat_<?= (int) $category['id'] ?>" <?= in_array((string) $category['id'], $selectedCategories, true) ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="cat_<?= (int) $category['id'] ?>"><?= htmlspecialchars($category['name']) ?></label>
-                  </div>
-                </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" id="clearCatsBtn" class="btn btn-outline-secondary"><?= htmlspecialchars($t['clear']) ?></button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars($t['cancel']) ?></button>
-            <button type="submit" class="btn btn-primary"><?= htmlspecialchars($t['apply']) ?></button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    (function () {
-      const search = document.getElementById('catSearch');
-      const clearBtn = document.getElementById('clearCatsBtn');
-      const checkboxes = () => Array.from(document.querySelectorAll('.cat-checkbox'));
-
-      if (search) {
-        search.addEventListener('input', function () {
-          const query = this.value.trim().toLowerCase();
-          document.querySelectorAll('.cat-item').forEach(function (item) {
-            const label = item.textContent.toLowerCase();
-            item.style.display = label.includes(query) ? '' : 'none';
-          });
-        });
-      }
-
-      if (clearBtn) {
-        clearBtn.addEventListener('click', function () {
-          checkboxes().forEach(function (checkbox) {
-            checkbox.checked = false;
-          });
-        });
-      }
-    }());
-  </script>
 </body>
 </html>
