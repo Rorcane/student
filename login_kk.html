@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход и регистрация | TruWork</title>
+  <title>Кіру және тіркелу | TruWork</title>
   <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="shortcut icon" href="/favicon.ico">
@@ -17,19 +17,19 @@
 <body>
   <header class="site-header">
     <div class="site-shell site-header__inner">
-      <a class="brand" href="index.php"><img src="logo2.png" alt="TruWork"></a>
-      <nav class="site-nav" aria-label="Основная навигация">
-        <a href="index.php">Главная</a>
-        <a href="vacancies.php">Вакансии</a>
-        <a href="about.html">О нас</a>
-        <a href="faq.html">FAQ</a>
-        <a href="support.html">Поддержка</a>
-        <a href="contact.html">Контакты</a>
+      <a class="brand" href="index_kk.php"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="Негізгі навигация">
+        <a href="index_kk.php">Басты бет</a>
+        <a href="vacancies_kk.php">Вакансиялар</a>
+        <a href="about_kk.html">Біз туралы</a>
+        <a href="faq_kk.html">FAQ</a>
+        <a href="support_kk.html">Қолдау</a>
+        <a href="contact_kk.html">Байланыс</a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
-          <span class="is-active">RU</span>
-          <a href="login_kk.html">KZ</a>
+          <a href="login.html">RU</a>
+          <span class="is-active">KZ</span>
         </div>
       </div>
     </div>
@@ -38,18 +38,18 @@
   <main class="page-main">
     <div class="site-shell">
       <section class="auth-card">
-        <h1 class="section-title">Вход и регистрация</h1>
-        <p class="section-subtitle">Выберите действие: создать новый аккаунт или войти в существующий.</p>
+        <h1 class="section-title">Кіру және тіркелу</h1>
+        <p class="section-subtitle">Жаңа аккаунт құру немесе бар аккаунтқа кіру әрекетін таңдаңыз.</p>
         <div class="tabs">
-          <a class="tab-link is-active" href="#register">Регистрация</a>
-          <a class="tab-link" href="#login">Вход</a>
+          <a class="tab-link is-active" href="#register">Тіркелу</a>
+          <a class="tab-link" href="#login">Кіру</a>
         </div>
 
         <div class="form-stack" id="register">
-          <h2>Создать аккаунт</h2>
+          <h2>Аккаунт құру</h2>
           <form class="form-stack" action="register.php" method="post">
             <div>
-              <label class="label" for="reg-username">Имя пользователя</label>
+              <label class="label" for="reg-username">Пайдаланушы аты</label>
               <input class="input" id="reg-username" type="text" name="username" required>
             </div>
             <div>
@@ -57,27 +57,27 @@
               <input class="input" id="reg-email" type="email" name="email" required>
             </div>
             <div>
-              <label class="label" for="reg-password">Пароль</label>
+              <label class="label" for="reg-password">Құпиясөз</label>
               <input class="input" id="reg-password" type="password" name="password" required>
             </div>
-            <button class="button-primary" type="submit">Зарегистрироваться</button>
+            <button class="button-primary" type="submit">Тіркелу</button>
           </form>
         </div>
 
         <hr style="margin:28px 0; border:none; border-top:1px solid var(--line);">
 
         <div class="form-stack" id="login">
-          <h2>Войти в аккаунт</h2>
+          <h2>Аккаунтқа кіру</h2>
           <form class="form-stack" action="auth.php" method="post">
             <div>
-              <label class="label" for="login-username">Имя пользователя</label>
+              <label class="label" for="login-username">Пайдаланушы аты</label>
               <input class="input" id="login-username" type="text" name="username" required>
             </div>
             <div>
-              <label class="label" for="login-password">Пароль</label>
+              <label class="label" for="login-password">Құпиясөз</label>
               <input class="input" id="login-password" type="password" name="password" required>
             </div>
-            <button class="button-primary" type="submit">Войти</button>
+            <button class="button-primary" type="submit">Кіру</button>
           </form>
         </div>
       </section>

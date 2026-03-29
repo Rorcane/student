@@ -1,140 +1,127 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TruWork - О нас</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    /* Добавляем стили из других страниц */
-    body {
-        padding-top: 35px;
-        background: #f8f9fa;
-        font-family: 'Inter', sans-serif;
-    }
-    
-    .about-section {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        padding: 2.5rem;
-        margin: 2rem 0;
-    }
-    
-    .values-card {
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
-        padding: 1.5rem;
-        transition: transform 0.3s;
-    }
-    
-    .values-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .team-member img {
-        width: 150px;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 50%;
-        margin-bottom: 1rem;
-    }
-  </style>
+  <title>О нас | TruWork</title>
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/public-site.css">
 </head>
 <body>
-  <!-- Навбар с добавлением пункта "О нас" -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
-    <div class="container">
-      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.php">
-        <img src="logo2.png" alt="TruWork" width="95" class="me-2">
-      </a>
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-          
-      
-    </div>
-  </nav>
-
-  <main class="container py-5">
-    <div class="about-section">
-      <h1 class="mb-4 fw-bold">О компании TruWork</h1>
-      
-      <div class="row g-4">
-        <!-- Основной контент -->
-        <div class="col-lg-6">
-          <p class="lead">Мы - современная платформа для поиска работы и подбора персонала, созданная чтобы сделать процесс трудоустройства простым и эффективным.</p>
-          
-          <h3 class="mt-5 mb-3">Наша история</h3>
-          <p>Основанная в 2025 году, компания TruWork прошла путь от стартапа до лидера рынка в сфере онлайн-рекрутинга. Сегодня мы помогаем тысячам людей находить работу мечты.</p>
+  <header class="site-header">
+    <div class="site-shell site-header__inner">
+      <a class="brand" href="index.php"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="Основная навигация">
+        <a href="index.php">Главная</a>
+        <a href="vacancies.php">Вакансии</a>
+        <a href="about.html" class="is-active">О нас</a>
+        <a href="faq.html">FAQ</a>
+        <a href="support.html">Поддержка</a>
+        <a href="contact.html">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch" aria-label="Переключение языка">
+          <span class="is-active">RU</span>
+          <a href="about_kk.html">KZ</a>
         </div>
-
-        <!-- Изображение -->
-        <div class="col-lg-6">
-          <img src="office.jpg" alt="" class="img-fluid rounded-3">
-        </div>
+        <a class="button-primary" href="login.html">Войти</a>
       </div>
+    </div>
+  </header>
 
-      <!-- Наши ценности -->
-      <h3 class="mt-5 mb-4">Наши ценности</h3>
-      <div class="row g-4">
-        <div class="col-md-4">
-          <div class="values-card">
-            <h5>Прозрачность</h5>
-            <p>Честные условия и открытое взаимодействие между всеми участниками</p>
+  <section class="hero">
+    <div class="site-shell">
+      <div class="hero__panel">
+        <div class="hero__eyebrow">TruWork Team</div>
+        <h1>Мы делаем поиск работы и сотрудников спокойнее, быстрее и прозрачнее.</h1>
+        <p>TruWork объединяет вакансии, отклики, цифровой профиль специалиста и удобные HR-инструменты в одной понятной системе.</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="page-main">
+    <div class="site-shell grid">
+      <section class="page-card">
+        <h2 class="section-title">Что такое TruWork</h2>
+        <p class="section-subtitle">Платформа создана для компаний и специалистов, которым важны скорость найма, аккуратная коммуникация и единый рабочий процесс без хаоса между разными сервисами.</p>
+        <div class="grid grid-3">
+          <article class="feature-card">
+            <h3>Быстрый старт</h3>
+            <p>Публикация вакансий, поиск кандидатов и отклики собраны в одном интерфейсе без лишних переходов.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Понятная структура</h3>
+            <p>Все публичные страницы и личные сценарии оформлены в одном стиле, поэтому пользователи не теряются.</p>
+          </article>
+          <article class="feature-card">
+            <h3>Поддержка роста</h3>
+            <p>Мы развиваем платформу так, чтобы ею было удобно пользоваться и небольшим командам, и растущим компаниям.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <div class="grid grid-2">
+          <div>
+            <h2>Наша миссия</h2>
+            <p>Помочь бизнесу быстро находить подходящих специалистов, а соискателям удобно управлять карьерой и откликами на одной платформе.</p>
+            <p>Мы стремимся убрать лишнюю фрагментацию: единые страницы, единый визуальный язык, единая логика действий для всех пользователей.</p>
+          </div>
+          <div>
+            <h2>Наш подход</h2>
+            <ul class="list-clean">
+              <li>Простые формы и предсказуемая навигация.</li>
+              <li>Единый визуальный стандарт на всех пользовательских страницах.</li>
+              <li>Поддержка двух языков: русского и казахского.</li>
+              <li>Фокус на практической пользе, а не на перегруженном интерфейсе.</li>
+            </ul>
           </div>
         </div>
-        <div class="col-md-4">
-          <div class="values-card">
-            <h5>Эффективность</h5>
-            <p>Современные технологии для быстрого достижения результатов</p>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="values-card">
-            <h5>Поддержка</h5>
-            <p>Персональный подход к каждому пользователю 24/7</p>
-          </div>
-        </div>
-      </div>
+      </section>
 
-     <!-- Наша команда -->
-<section class="container">
-  <h3 class="mt-5 mb-4 text-center">Наша команда</h3>
-  <div class="row g-4 justify-content-center">
-    <div class="col-md-3 d-flex flex-column align-items-center">
-      <div class="team-member text-center">
-        <img src="img/Ayau.jpg" alt="" class="img-fluid rounded-circle mb-3">
-        <h5>Елубай Аяулым</h5>
-        <p class="text-muted">UI/UX designer</p>
-      </div>
+      <section class="page-card">
+        <h2 class="section-title">Наша команда</h2>
+        <p class="section-subtitle">Небольшая команда, которая развивает продукт, интерфейс и пользовательский опыт.</p>
+        <div class="team-grid">
+          <article class="team-card">
+            <img src="img/Ayau.jpg" alt="Аяулым Елубай">
+            <h3>Аяулым Елубай</h3>
+            <p class="muted">UI/UX Designer</p>
+          </article>
+          <article class="team-card">
+            <img src="img/Aset0.jpg" alt="Асет Жаксылык">
+            <h3>Асет Жаксылык</h3>
+            <p class="muted">CEO, Project Manager</p>
+          </article>
+          <article class="team-card">
+            <img src="img/Nur.jpg" alt="Нурадил Муратбаев">
+            <h3>Нурадил Муратбаев</h3>
+            <p class="muted">Frontend Developer</p>
+          </article>
+        </div>
+      </section>
     </div>
-    <div class="col-md-3 d-flex flex-column align-items-center">
-      <div class="team-member text-center">
-        <img src="img/Aset0.jpg" alt="" class="img-fluid rounded-circle mb-3">
-        <h5>Жаксылык Асет</h5>
-        <p class="text-muted">CEO, project manager</p>
-      </div>
-    </div>
-    <div class="col-md-3 d-flex flex-column align-items-center">
-      <div class="team-member text-center">
-        <img src="img/Nur.jpg" alt="" class="img-fluid rounded-circle mb-3">
-        <h5>Муратбаев Нурадил</h5>
-        <p class="text-muted">Frontend developer</p>
-      </div>
-    </div>
-  </div>
-</section>
-
   </main>
 
-  <footer class="bg-light border-top py-4 mt-5">
-    <div class="container text-center text-muted">
-      <p>&copy; 2025 TruWork. Все права защищены.<br>
-        Контакты: <a href="mailto:info@truwork.ru">info@truwork.ru</a></p>
+  <footer class="site-footer">
+    <div class="site-shell site-footer__panel">
+      <div>
+        <strong>TruWork</strong>
+        <div class="footer-note">Единая HR-платформа для найма и поиска работы.</div>
+      </div>
+      <div class="footer-links">
+        <a href="policy.html">Политика конфиденциальности</a>
+        <a href="terms.html">Условия использования</a>
+        <a href="contact.html">Контакты</a>
+      </div>
     </div>
   </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

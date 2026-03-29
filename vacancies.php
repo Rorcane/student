@@ -1,81 +1,55 @@
 <?php
 require_once 'config.php';
-/**
- * Возвращает правильную форму слова для числительных по-русски
- * @param int $n — число
- * @param array $forms — массив из трёх форм: ['человек','человека','человек']
- * @return string
- */
+
 function plural_form(int $n, array $forms): string {
     $n = abs($n) % 100;
     $n1 = $n % 10;
-    if ($n > 10 && $n < 20) return $forms[2];
-    if ($n1 > 1 && $n1 < 5) return $forms[1];
-    if ($n1 == 1) return $forms[0];
+    if ($n > 10 && $n < 20) {
+        return $forms[2];
+    }
+    if ($n1 > 1 && $n1 < 5) {
+        return $forms[1];
+    }
+    if ($n1 === 1) {
+        return $forms[0];
+    }
     return $forms[2];
 }
 
-// Получаем фильтры из GET-запроса
-$title_filter    = isset($_GET['title'])    ? trim($_GET['title'])    : '';
-$company_filter  = isset($_GET['company'])  ? trim($_GET['company'])  : '';
+$lang = $siteLang ?? 'ru';
+$isKz = $lang === 'kk';
 
-// Поддержка category (single) и category[] (multiple)
+$title_filter = isset($_GET['title']) ? trim((string) $_GET['title']) : '';
+$company_filter = isset($_GET['company']) ? trim((string) $_GET['company']) : '';
+
 $selectedCategories = [];
 if (isset($_GET['category'])) {
     if (is_array($_GET['category'])) {
         $selectedCategories = array_map('trim', $_GET['category']);
     } else {
-        $selectedCategories = [ trim($_GET['category']) ];
+        $selectedCategories = [trim((string) $_GET['category'])];
     }
 }
-// Иногда JS может send category[] as 'category[]' key — обработаем на всякий случай
 if (empty($selectedCategories) && isset($_GET['category[]']) && is_array($_GET['category[]'])) {
     $selectedCategories = array_map('trim', $_GET['category[]']);
 }
 
-// Нормализуем: если единственная категория — и это 'Все категории' — считаем как пустой выбор
-$selectedCategories = array_filter($selectedCategories, function($c){ return $c !== '' && $c !== null; });
-if (count($selectedCategories) === 1 && $selectedCategories[0] === 'Все категории') {
-    $selectedCategories = [];
-}
+$selectedCategories = array_values(array_filter($selectedCategories, static function ($value) {
+    return $value !== '' && $value !== null;
+}));
 
-// Параметры пагинации
-$limit  = 15;
-$page   = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = 15;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
-// Получаем список категорий динамически:
-$categories = ['Все категории'];
-
+$categories = [];
 try {
     $catStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
     $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
-    // $catRows = $catStmt->fetchAll(PDO::FETCH_COLUMN);
-    // if (!empty($catRows)) {
-    //     foreach ($catRows as $c) $categories[] = $c;
-    // } else {
-    //     $vacCatStmt = $pdo->query("SELECT DISTINCT IFNULL(NULLIF(TRIM(category),''),'Другое') AS cname FROM vacancies ORDER BY cname");
-    //     $vacCats = $vacCatStmt->fetchAll(PDO::FETCH_COLUMN);
-    //     foreach ($vacCats as $c) {
-    //         if ($c === '' || $c === null) $c = 'Другое';
-    //         if (!in_array($c, $categories, true)) $categories[] = $c;
-    //     }
-    // }
 } catch (PDOException $e) {
-    try {
-        $vacCatStmt = $pdo->query("SELECT DISTINCT IFNULL(NULLIF(TRIM(category),''),'Другое') AS cname FROM vacancies ORDER BY cname");
-        $vacCats = $vacCatStmt->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($vacCats as $c) {
-            if ($c === '' || $c === null) $c = 'Другое';
-            if (!in_array($c, $categories, true)) $categories[] = $c;
-        }
-    } catch (PDOException $e2) {
-        $categories = ['Все категории', 'Продажи', 'Маркетинг', 'IT', 'Логистика', 'Поддержка', 'Технологии', 'Другое'];
-    }
+    $categories = [];
 }
 
-
-// Построение основного SQL-запроса
 $params = [];
 $sql = "
     SELECT v.*, c.name AS category_name, COUNT(a.id) AS responses
@@ -87,73 +61,66 @@ $sql = "
 
 if ($title_filter !== '') {
     $sql .= " AND v.title LIKE :title";
-    $params[':title'] = "%{$title_filter}%";
+    $params[':title'] = '%' . $title_filter . '%';
 }
 if ($company_filter !== '') {
     $sql .= " AND v.company LIKE :company";
-    $params[':company'] = "%{$company_filter}%";
+    $params[':company'] = '%' . $company_filter . '%';
 }
-// Категории: поддержка множественного выбора
 if (!empty($selectedCategories)) {
-    // Если одна категория — простое сравнение
     if (count($selectedCategories) === 1) {
         $sql .= " AND v.category_id = :category";
         $params[':category'] = $selectedCategories[0];
     } else {
-        // IN (...) — создаём плейсхолдеры
-        $inPlaceholders = [];
+        $holders = [];
         foreach ($selectedCategories as $i => $cat) {
             $ph = ':cat' . $i;
-            $inPlaceholders[] = $ph;
+            $holders[] = $ph;
             $params[$ph] = $cat;
         }
-        $sql .= " AND v.category_id IN (" . implode(',', $inPlaceholders) . ")";
+        $sql .= ' AND v.category_id IN (' . implode(',', $holders) . ')';
     }
 }
-// Добавляем LIMIT/OFFSET
-$sql .= " GROUP BY v.id ORDER BY v.created_at DESC LIMIT {$limit} OFFSET {$offset}";
 
+$sql .= " GROUP BY v.id ORDER BY v.created_at DESC LIMIT {$limit} OFFSET {$offset}";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Подсчёт общего количества вакансий для пагинации
 $countSql = "
-SELECT COUNT(*)
-FROM vacancies v
-LEFT JOIN categories c ON v.category_id = c.id
-WHERE 1=1
+    SELECT COUNT(*)
+      FROM vacancies v
+ LEFT JOIN categories c ON v.category_id = c.id
+     WHERE 1=1
 ";
-
 $countParams = [];
 if ($title_filter !== '') {
     $countSql .= " AND v.title LIKE :title";
-    $countParams[':title'] = "%{$title_filter}%";
+    $countParams[':title'] = '%' . $title_filter . '%';
 }
 if ($company_filter !== '') {
     $countSql .= " AND v.company LIKE :company";
-    $countParams[':company'] = "%{$company_filter}%";
+    $countParams[':company'] = '%' . $company_filter . '%';
 }
 if (!empty($selectedCategories)) {
     if (count($selectedCategories) === 1) {
         $countSql .= " AND v.category_id = :category";
         $countParams[':category'] = $selectedCategories[0];
     } else {
-        $inPlaceholders = [];
+        $holders = [];
         foreach ($selectedCategories as $i => $cat) {
-            $ph = ':catc' . $i;
-            $inPlaceholders[] = $ph;
+            $ph = ':countcat' . $i;
+            $holders[] = $ph;
             $countParams[$ph] = $cat;
         }
-        $countSql .= " AND v.category_id IN (" . implode(',', $inPlaceholders) . ")";
+        $countSql .= ' AND v.category_id IN (' . implode(',', $holders) . ')';
     }
 }
 $countStmt = $pdo->prepare($countSql);
 $countStmt->execute($countParams);
-$totalVacancies = (int)$countStmt->fetchColumn();
-$totalPages = (int)ceil($totalVacancies / $limit);
+$totalVacancies = (int) $countStmt->fetchColumn();
+$totalPages = (int) ceil($totalVacancies / $limit);
 
-// Получение роли пользователя (если авторизован)
 $user = null;
 if (isset($_COOKIE['user'])) {
     $uStmt = $pdo->prepare("SELECT role FROM users WHERE username = ?");
@@ -161,330 +128,320 @@ if (isset($_COOKIE['user'])) {
     $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Для отображения выбранных категорий (UI)
-$selectedCatsForUI = $selectedCategories;
+$categoryNames = [];
+foreach ($categories as $categoryRow) {
+    $categoryNames[(string) $categoryRow['id']] = $categoryRow['name'];
+}
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+$t = [
+    'page_title' => $isKz ? 'TruWork - вакансиялар' : 'TruWork - вакансии',
+    'home' => $isKz ? 'Басты бет' : 'Главная',
+    'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
+    'faq' => 'FAQ',
+    'support' => $isKz ? 'Қолдау' : 'Поддержка',
+    'contact' => $isKz ? 'Байланыс' : 'Контакты',
+    'login' => $isKz ? 'Кіру' : 'Войти',
+    'title' => $isKz ? 'Вакансияларды табу' : 'Найти вакансию',
+    'subtitle' => $isKz ? 'Іздеу мен сүзгілерді пайдаланып, өзіңізге лайық ұсынысты табыңыз.' : 'Используйте поиск и фильтры, чтобы быстро найти подходящее предложение.',
+    'title_placeholder' => $isKz ? 'Лауазым атауы' : 'Название должности',
+    'company_placeholder' => $isKz ? 'Компания' : 'Компания',
+    'all_categories' => $isKz ? 'Барлық санаттар' : 'Все категории',
+    'filter' => $isKz ? 'Сүзу' : 'Фильтровать',
+    'categories' => $isKz ? 'Санаттар' : 'Категории',
+    'search_categories' => $isKz ? 'Санатты іздеу...' : 'Поиск категории...',
+    'choose_categories' => $isKz ? 'Санаттарды таңдаңыз' : 'Выберите категории',
+    'clear' => $isKz ? 'Тазарту' : 'Очистить',
+    'cancel' => $isKz ? 'Бас тарту' : 'Отмена',
+    'apply' => $isKz ? 'Қолдану' : 'Применить',
+    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
+    'found' => $isKz ? 'Табылды' : 'Найдено',
+    'vacancy_forms' => $isKz ? ['вакансия', 'вакансия', 'вакансия'] : ['вакансия', 'вакансии', 'вакансий'],
+    'company' => $isKz ? 'Компания' : 'Компания',
+    'salary' => $isKz ? 'Жалақы' : 'Зарплата',
+    'category' => $isKz ? 'Санат' : 'Категория',
+    'location' => $isKz ? 'Орналасқан жері' : 'Местоположение',
+    'details' => $isKz ? 'Толығырақ' : 'Подробнее',
+    'delete' => $isKz ? 'Жою' : 'Удалить',
+    'confirm_delete' => $isKz ? 'Осы вакансияны шынымен жойғыңыз келе ме?' : 'Вы уверены, что хотите удалить вакансию?',
+    'respond' => $isKz ? 'Өтінім жіберу' : 'Откликнуться',
+    'respond_question' => $isKz ? '«%s» вакансиясына өтінім жібересіз бе?' : 'Откликнуться на вакансию «%s»?',
+    'description' => $isKz ? 'Сипаттама' : 'Описание',
+    'empty' => $isKz ? 'Вакансиялар табылмады.' : 'Вакансии не найдены.',
+    'footer_note' => $isKz ? 'Жұмыс іздеу мен қызметкер таңдауға арналған бірыңғай HR-платформа.' : 'Единая HR-платформа для поиска работы и подбора специалистов.',
+    'policy' => $isKz ? 'Құпиялылық саясаты' : 'Политика конфиденциальности',
+    'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+];
 
+$paths = [
+    'index' => $isKz ? 'index_kk.php' : 'index.php',
+    'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
+    'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
+    'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'contact' => $isKz ? 'contact_kk.html' : 'contact.html',
+    'login' => $isKz ? 'login_kk.html' : 'login.html',
+    'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
+    'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+    'alt' => $isKz ? 'vacancies.php' : 'vacancies_kk.php',
+];
 ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $isKz ? 'kk' : 'ru' ?>">
 <head>
-	<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-QTCZG5LGVP"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-QTCZG5LGVP');
-</script>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TruWork</title>
-  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <link rel="manifest" href="/site.webmanifest" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root { --primary: #2563eb; --secondary: #3b82f6; --accent: #60a5fa; --gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);}    
-    body { padding-top: 35px; background: #f8f9fa; font-family: 'Inter', sans-serif; }
-    .navbar { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);}    
-    .nav-link { position: relative; padding: 0.5rem 1rem !important; color: #495057 !important; }
-    .nav-link.active { color: var(--primary) !important; }
-    .nav-link-border { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--primary); transition: width 0.3s ease; }
-    .nav-link:hover .nav-link-border, .nav-link.active .nav-link-border { width: 100%; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= htmlspecialchars($t['page_title']) ?></title>
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/public-site.css">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
-    <div class="container">
-      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.php">
-        <img src="logo2.png" alt="TruWork" width="95" class="me-2">
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-          <li class="nav-item"><a class="nav-link active" href="vacancies.php"><span class="nav-link-border"></span>Найти работу</a></li>
-          <li class="nav-item"><a class="nav-link" href="vacancy.php"><span class="nav-link-border"></span>Опубликовать</a></li>
-          <li class="nav-item"><a class="nav-link" href="dashboard.php"><span class="nav-link-border"></span>Панель</a></li>
-          <li class="nav-item"><a class="nav-link" href="discovery.php"><span class="nav-link-border"></span>Обзор</a></li>
-        </ul>
-        <?php if(isset($_COOKIE['user'])): ?>
-          <a href="profile.php" class="btn btn-outline-primary ms-3"><?= htmlspecialchars($_COOKIE['user']) ?></a>
-        <?php else: ?>
-          <a href="login.html" class="btn btn-primary ms-3">Войти</a>
-        <?php endif; ?>
-      </div>
-    </div>
-  </nav>
-  <main class="container py-5">
-    <h1 class="mb-4 fw-bold">Умный поиск</h1>
-    <!-- Форма фильтрации -->
-    <form method="get" class="row g-3 mb-4">
-      <div class="col-md-3">
-        <input type="text" name="title" class="form-control" placeholder="Название должности" value="<?= htmlspecialchars($title_filter) ?>">
-      </div>
-      <div class="col-md-3">
-        <input type="text" name="company" class="form-control" placeholder="Компания" value="<?= htmlspecialchars($company_filter) ?>">
-      </div>
-      <div class="col-md-3">
-        <!-- Оставляем селект для обратной совместимости -->
-<select name="category" class="form-select">
-    <option value="">Все категории</option>
-    <?php foreach ($categories as $cat): ?>
-        <option value="<?= $cat['id'] ?>"
-            <?= in_array($cat['id'], $selectedCategories) ? 'selected' : '' ?>>
-            <?= htmlspecialchars($cat['name']) ?>
-        </option>
-    <?php endforeach; ?>
-</select>
-      </div>
-      <div class="col-md-3">
-        <button type="submit" class="btn btn-primary w-100">Фильтровать</button>
-      </div>
-    </form>
-	  
-    <!-- Блок: кнопка "Категории" и модал (вариант B) -->
-    <div class="mb-4">
-      <div class="d-flex align-items-center gap-3">
-        <div>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#catsModal">
-            Категории
-          </button>
-        </div>
-        <div id="selectedCats" class="d-inline-block">
-          <?php if (!empty($selectedCatsForUI)): ?>
-          <?php 
-          $catNamesById = [];
-          foreach ($categories as $c) {
-              $catNamesById[$c['id']] = $c['name'];
-          }
-          ?>
-          <?php foreach ($selectedCatsForUI as $sc): ?>
-            <span class="badge bg-light text-dark border me-1">
-              <?= htmlspecialchars($catNamesById[$sc] ?? $sc) ?>
-            </span>
-          <?php endforeach; ?>
+  <header class="site-header">
+    <div class="site-shell site-header__inner">
+      <a class="brand" href="<?= htmlspecialchars($paths['index']) ?>"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="<?= $isKz ? 'Негізгі навигация' : 'Основная навигация' ?>">
+        <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
+        <a href="<?= htmlspecialchars($paths['vacancies']) ?>" class="is-active"><?= htmlspecialchars($t['vacancies']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
+        <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+        <a href="<?= htmlspecialchars($paths['contact']) ?>"><?= htmlspecialchars($t['contact']) ?></a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch">
+          <?php if ($isKz): ?>
+            <a href="vacancies.php">RU</a>
+            <span class="is-active">KZ</span>
           <?php else: ?>
-            <span class="text-muted small">Все категории</span>
+            <span class="is-active">RU</span>
+            <a href="vacancies_kk.php">KZ</a>
           <?php endif; ?>
         </div>
-
-        <?php if ($user && $user['role'] === 'admin'): ?>
-        <form action="smart_search.php" method="get" style="display:inline-block; margin-left:auto;">
-          <button type="submit" class="btn btn-primary">
-            Умный поиск
-          </button>
-        </form>
+        <?php if (isset($_COOKIE['user'])): ?>
+          <a class="button-primary" href="profile.php"><?= htmlspecialchars($_COOKIE['user']) ?></a>
+        <?php else: ?>
+          <a class="button-primary" href="<?= htmlspecialchars($paths['login']) ?>"><?= htmlspecialchars($t['login']) ?></a>
         <?php endif; ?>
       </div>
     </div>
+  </header>
 
-    <!-- Модал с поиском и чекбоксами -->
-    <div class="modal fade" id="catsModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <form id="catsForm" method="get" action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>">
-            <div class="modal-header">
-              <h5 class="modal-title">Выберите категории</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-            </div>
-            <div class="modal-body">
-              <input id="catSearch" class="form-control mb-3" placeholder="Поиск категории..." type="search" autocomplete="off">
-              <div id="catsList" class="row" style="max-height:55vh; overflow:auto;">
-<?php foreach ($categories as $cat): ?>
-  <div class="col-6 col-md-4 mb-2">
-    <div class="form-check">
-      <input class="form-check-input cat-checkbox"
-             type="checkbox"
-             value="<?= $cat['id'] ?>"
-             id="cat_<?= $cat['id'] ?>"
-             <?= in_array($cat['id'], $selectedCategories) ? 'checked' : '' ?>>
-      <label class="form-check-label"
-             for="cat_<?= $cat['id'] ?>">
-        <?= htmlspecialchars($cat['name']) ?>
-      </label>
-    </div>
-  </div>
-<?php endforeach; ?>
+  <main class="page-main">
+    <div class="site-shell grid">
+      <section class="page-card">
+        <h1 class="section-title"><?= htmlspecialchars($t['title']) ?></h1>
+        <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
 
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" id="clearCatsBtn" class="btn btn-outline-secondary">Очистить</button>
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-              <button type="submit" id="applyCatsBtn" class="btn btn-primary">Применить</button>
-            </div>
-          </form>
+        <form method="get" class="form-grid" action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>">
+          <div>
+            <label class="label" for="filter-title"><?= htmlspecialchars($t['title_placeholder']) ?></label>
+            <input class="input" id="filter-title" type="text" name="title" value="<?= htmlspecialchars($title_filter) ?>" placeholder="<?= htmlspecialchars($t['title_placeholder']) ?>">
+          </div>
+          <div>
+            <label class="label" for="filter-company"><?= htmlspecialchars($t['company_placeholder']) ?></label>
+            <input class="input" id="filter-company" type="text" name="company" value="<?= htmlspecialchars($company_filter) ?>" placeholder="<?= htmlspecialchars($t['company_placeholder']) ?>">
+          </div>
+          <div>
+            <label class="label" for="filter-category"><?= htmlspecialchars($t['category']) ?></label>
+            <select class="input" id="filter-category" name="category">
+              <option value=""><?= htmlspecialchars($t['all_categories']) ?></option>
+              <?php foreach ($categories as $category): ?>
+                <option value="<?= htmlspecialchars((string) $category['id']) ?>" <?= in_array((string) $category['id'], $selectedCategories, true) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($category['name']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+            <button class="button-primary" type="submit"><?= htmlspecialchars($t['filter']) ?></button>
+            <button class="button-secondary" type="button" data-bs-toggle="modal" data-bs-target="#catsModal"><?= htmlspecialchars($t['categories']) ?></button>
+            <?php if ($user && ($user['role'] ?? '') === 'admin'): ?>
+              <a class="button-secondary" href="smart_search.php"><?= htmlspecialchars($t['smart_search']) ?></a>
+            <?php endif; ?>
+          </div>
+        </form>
+
+        <div style="margin-top:22px;">
+          <?php if (!empty($selectedCategories)): ?>
+            <?php foreach ($selectedCategories as $selectedCategory): ?>
+              <span class="button-secondary" style="padding:8px 14px;margin:0 8px 8px 0;cursor:default;">
+                <?= htmlspecialchars($categoryNames[(string) $selectedCategory] ?? (string) $selectedCategory) ?>
+              </span>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <span class="muted"><?= htmlspecialchars($t['all_categories']) ?></span>
+          <?php endif; ?>
         </div>
-      </div>
-    </div>
-	  
-    <p class="text-muted">Найдено <?= $totalVacancies ?> вакансий</p>
+      </section>
 
-	
-    <?php if ($vacancies): ?>
-      <?php foreach ($vacancies as $vacancy): ?>
-	    <?php $author = urlencode($vacancy['author']); ?>
-        <div class="card mb-3 shadow-sm">
-          <div class="card-body d-flex flex-column flex-sm-row align-items-start justify-content-between">
-            <div>
-              <h5 class="mb-1 fw-bold"><?= htmlspecialchars($vacancy['title'] ?? 'Без названия') ?></h5>
-				<p><strong>Компания:</strong> <?= htmlspecialchars($vacancy['company']) ?></p>
-              <p class="mb-1"><strong>Зарплата:</strong> <?= htmlspecialchars($vacancy['salary'] ?? '-') ?></p>
-<p class="mb-1"><strong>Категория:</strong> <?= htmlspecialchars($vacancy['category_name'] ?? '-') ?></p>
-				
-              <?php if ($user && $user['role'] === 'admin'): ?>
-                <a href="delete_vacancy.php?id=<?= $vacancy['id'] ?>" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Вы уверены?');">Удалить</a>
-              <?php endif; ?>
-            </div>
-            <div>
-              <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#applyModal-<?= $vacancy['id'] ?>" data-bs-id="<?= $vacancy['id'] ?>" data-bs-title="<?= htmlspecialchars($vacancy['title'], ENT_QUOTES) ?>">Развернуть</button>
-              <div class="modal fade" id="applyModal-<?= $vacancy['id'] ?>" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                  <form action="process_application.php" method="POST" class="modal-content">
-                    <input type="hidden" name="vacancy_id" value="<?= $vacancy['id'] ?>">
-                    <div class="modal-header">
-                      <h5 class="modal-title">Развернуть</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                   <div class="modal-body">
-  					<p>Откликнуться на вакансию «<strong><?= htmlspecialchars($vacancy['title']) ?></strong>»?</p>
-  					<hr>
-  					<p><strong>Описание вакансии:</strong></p>
-  					<p><?= nl2br(htmlspecialchars($vacancy['description'])) ?></p>
-  					<p><strong>Компания:</strong> <?= htmlspecialchars($vacancy['company']) ?></p>
-  					<p><strong>Местоположение:</strong> <?= htmlspecialchars($vacancy['location']) ?></p>
-					</div>
-                    <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-					<!--<a href="chat.php?with=<?= $author ?>" class="btn btn-primary">Откликнуться</a>-->
-					<button type="submit" class="btn btn-primary">Откликнуться</button>
-                    </div>
-                  </form>
-                </div>
+      <section class="page-card">
+        <p class="section-subtitle" style="margin-bottom:0;">
+          <?= htmlspecialchars($t['found']) ?> <?= $totalVacancies ?> <?= htmlspecialchars(plural_form($totalVacancies, $t['vacancy_forms'])) ?>
+        </p>
+      </section>
+
+      <?php if ($vacancies): ?>
+        <?php foreach ($vacancies as $vacancy): ?>
+          <section class="page-card">
+            <div class="grid grid-2" style="align-items:start;">
+              <div>
+                <h2 style="margin-bottom:14px;"><?= htmlspecialchars($vacancy['title'] ?? ($isKz ? 'Атаусыз' : 'Без названия')) ?></h2>
+                <p><strong><?= htmlspecialchars($t['company']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['company'] ?? '-')) ?></p>
+                <p><strong><?= htmlspecialchars($t['salary']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['salary'] ?? '-')) ?></p>
+                <p><strong><?= htmlspecialchars($t['category']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['category_name'] ?? '-')) ?></p>
+                <p><strong><?= htmlspecialchars($t['location']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['location'] ?? '-')) ?></p>
               </div>
+              <div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                <button class="button-primary" type="button" data-bs-toggle="modal" data-bs-target="#applyModal-<?= (int) $vacancy['id'] ?>">
+                  <?= htmlspecialchars($t['details']) ?>
+                </button>
+                <?php if ($user && ($user['role'] ?? '') === 'admin'): ?>
+                  <a class="button-secondary" href="delete_vacancy.php?id=<?= (int) $vacancy['id'] ?>" onclick="return confirm('<?= htmlspecialchars($t['confirm_delete'], ENT_QUOTES) ?>');">
+                    <?= htmlspecialchars($t['delete']) ?>
+                  </a>
+                <?php endif; ?>
+              </div>
+            </div>
+          </section>
+
+          <div class="modal fade" id="applyModal-<?= (int) $vacancy['id'] ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <form action="process_application.php" method="post" class="modal-content">
+                <input type="hidden" name="vacancy_id" value="<?= (int) $vacancy['id'] ?>">
+                <div class="modal-header">
+                  <h5 class="modal-title"><?= htmlspecialchars($t['details']) ?></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($t['cancel']) ?>"></button>
+                </div>
+                <div class="modal-body">
+                  <p><?= htmlspecialchars(sprintf($t['respond_question'], (string) ($vacancy['title'] ?? ''))) ?></p>
+                  <hr>
+                  <p><strong><?= htmlspecialchars($t['description']) ?>:</strong></p>
+                  <p><?= nl2br(htmlspecialchars((string) ($vacancy['description'] ?? ''))) ?></p>
+                  <p><strong><?= htmlspecialchars($t['company']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['company'] ?? '-')) ?></p>
+                  <p><strong><?= htmlspecialchars($t['location']) ?>:</strong> <?= htmlspecialchars((string) ($vacancy['location'] ?? '-')) ?></p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars($t['cancel']) ?></button>
+                  <button type="submit" class="btn btn-primary"><?= htmlspecialchars($t['respond']) ?></button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
-      <?php endforeach; ?>
+        <?php endforeach; ?>
 
-      <!-- Пагинация -->
-      <?php if ($totalPages > 1): ?>
-        <nav><ul class="pagination justify-content-center">
-          <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-            <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-              <a class="page-link" href="?page=<?= $i ?><?= $title_filter? '&title='.urlencode($title_filter): '' ?><?= $company_filter? '&company='.urlencode($company_filter): '' ?><?php
-                // передаём выбранные категории в пагинации
-                if (!empty($selectedCatsForUI)) {
-                    foreach ($selectedCatsForUI as $sc) {
-                        echo '&' . (count($selectedCatsForUI) > 1 ? 'category[]=' . urlencode($sc) : 'category=' . urlencode($sc));
-                    }
-                }
-              ?>"><?= $i ?></a>
-            </li>
-          <?php endfor; ?>
-        </ul></nav>
+        <?php if ($totalPages > 1): ?>
+          <section class="page-card">
+            <nav aria-label="pagination">
+              <ul class="pagination justify-content-center mb-0">
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                  <?php
+                  $queryParams = ['page' => $i];
+                  if ($title_filter !== '') {
+                      $queryParams['title'] = $title_filter;
+                  }
+                  if ($company_filter !== '') {
+                      $queryParams['company'] = $company_filter;
+                  }
+                  if (!empty($selectedCategories)) {
+                      $queryParams['category'] = $selectedCategories;
+                  }
+                  ?>
+                  <li class="page-item <?= $i === $page ? 'active' : '' ?>">
+                    <a class="page-link" href="?<?= htmlspecialchars(http_build_query($queryParams)) ?>"><?= $i ?></a>
+                  </li>
+                <?php endfor; ?>
+              </ul>
+            </nav>
+          </section>
+        <?php endif; ?>
+      <?php else: ?>
+        <section class="page-card">
+          <p style="margin:0;"><?= htmlspecialchars($t['empty']) ?></p>
+        </section>
       <?php endif; ?>
-    <?php else: ?>
-      <p>Вакансии не найдены.</p>
-    <?php endif; ?>
+    </div>
   </main>
-  <footer>
-  <div class="container text-center">  <!-- добавили text-center -->
-    <div class="row justify-content-center g-4">  <!-- центрируем колонки -->
-      <div class="col-md-4">
-        <img src="logo2.png" alt="TruWork" height="18">
-        <p class="mt-3 text-muted">Инновационная HR-платформа нового поколения</p>
+
+  <footer class="site-footer">
+    <div class="site-shell site-footer__panel">
+      <div>
+        <strong>TruWork</strong>
+        <div class="footer-note"><?= htmlspecialchars($t['footer_note']) ?></div>
       </div>
-      <div class="col-md-2">
-        <h6>Компания</h6>
-        <ul class="list-unstyled">
-          <li><a href="about.html">О нас</a></li>
-          <li><a href="https://www.instagram.com/truwork_official?igsh=MWlyaDVkaWQyZXFjYg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer">Блог</a></li>
-        </ul>
-      </div>
-      <div class="col-md-2">
-        <h6>Помощь</h6>
-        <ul class="list-unstyled">
-          <li><a href="support.html">Поддержка</a></li>
-          <li><a href="faq.html">FAQ</a></li>
-        </ul>
+      <div class="footer-links">
+        <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>
+        <a href="<?= htmlspecialchars($paths['terms']) ?>"><?= htmlspecialchars($t['terms']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
       </div>
     </div>
+  </footer>
 
-    <hr class="my-5">
-
-    <div class="d-flex flex-column flex-md-row justify-content-center align-items-center text-muted"> 
-      <!-- flex-column на мобильных, flex-row на десктопе -->
-      <div class="mb-2 mb-md-0">© 2025 Truwork.kz. Все права защищены</div>
-      <div class="ms-md-4">
-        <a href="policy.html" class="me-3">Политика конфиденциальности</a>
-        <a href="terms.html">Условия использования</a>
+  <div class="modal fade" id="catsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form id="catsForm" method="get" action="<?= htmlspecialchars($_SERVER['PHP_SELF']) ?>">
+          <div class="modal-header">
+            <h5 class="modal-title"><?= htmlspecialchars($t['choose_categories']) ?></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($t['cancel']) ?>"></button>
+          </div>
+          <div class="modal-body">
+            <?php if ($title_filter !== ''): ?><input type="hidden" name="title" value="<?= htmlspecialchars($title_filter) ?>"><?php endif; ?>
+            <?php if ($company_filter !== ''): ?><input type="hidden" name="company" value="<?= htmlspecialchars($company_filter) ?>"><?php endif; ?>
+            <input id="catSearch" class="form-control mb-3" type="search" autocomplete="off" placeholder="<?= htmlspecialchars($t['search_categories']) ?>">
+            <div id="catsList" class="row" style="max-height:55vh;overflow:auto;">
+              <?php foreach ($categories as $category): ?>
+                <div class="col-6 col-md-4 mb-2 cat-item">
+                  <div class="form-check">
+                    <input class="form-check-input cat-checkbox" type="checkbox" name="category[]" value="<?= htmlspecialchars((string) $category['id']) ?>" id="cat_<?= (int) $category['id'] ?>" <?= in_array((string) $category['id'], $selectedCategories, true) ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="cat_<?= (int) $category['id'] ?>"><?= htmlspecialchars($category['name']) ?></label>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="clearCatsBtn" class="btn btn-outline-secondary"><?= htmlspecialchars($t['clear']) ?></button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars($t['cancel']) ?></button>
+            <button type="submit" class="btn btn-primary"><?= htmlspecialchars($t['apply']) ?></button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
-</footer>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      const search = document.getElementById('catSearch');
+      const clearBtn = document.getElementById('clearCatsBtn');
+      const checkboxes = () => Array.from(document.querySelectorAll('.cat-checkbox'));
 
-<script>
-(function(){
-  const search = document.getElementById('catSearch');
-  const checkboxesSelector = '.cat-checkbox';
-  function getCheckboxes() { return Array.from(document.querySelectorAll(checkboxesSelector)); }
-  const form = document.getElementById('catsForm');
-
-  // Фильтрация списка по вводу
-  search && search.addEventListener('input', function(){
-    const q = this.value.trim().toLowerCase();
-    getCheckboxes().forEach(ch => {
-      const label = ch.nextElementSibling.textContent.toLowerCase();
-      ch.closest('.col-6').style.display = label.includes(q) ? '' : 'none';
-    });
-  });
-
-  // При сабмите: формируем URL, сохраняя остальные GET-параметры
-  form && form.addEventListener('submit', function(e){
-    e.preventDefault();
-    const selected = getCheckboxes().filter(c => c.checked).map(c => c.value);
-
-    // Подготовим параметры текущего URL (сохраним title/company/page и т.д.)
-    const params = new URLSearchParams(window.location.search);
-
-    // Удаляем старые категории (и category[])
-    for (const key of Array.from(params.keys())) {
-      if (key === 'category' || key === 'category[]' || key.startsWith('category')) {
-        params.delete(key);
+      if (search) {
+        search.addEventListener('input', function () {
+          const query = this.value.trim().toLowerCase();
+          document.querySelectorAll('.cat-item').forEach(function (item) {
+            const label = item.textContent.toLowerCase();
+            item.style.display = label.includes(query) ? '' : 'none';
+          });
+        });
       }
-    }
 
-    if (selected.length === 0) {
-      // ничего — оставим без category (будет означать "все")
-      // либо можно явно установить 'Все категории'
-    } else if (selected.length === 1) {
-      params.set('category', selected[0]);
-    } else {
-      selected.forEach(s => params.append('category[]', s));
-    }
-
-    // Перенаправление (путь + параметры)
-    const target = window.location.pathname + '?' + params.toString();
-    window.location = target;
-  });
-
-  // Кнопка очистки — снимает все чекбоксы
-  document.getElementById('clearCatsBtn')?.addEventListener('click', function(){
-    getCheckboxes().forEach(c => c.checked = false);
-  });
-})();
-</script>
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+          checkboxes().forEach(function (checkbox) {
+            checkbox.checked = false;
+          });
+        });
+      }
+    }());
+  </script>
 </body>
 </html>
