@@ -147,10 +147,9 @@ $t = [
     'title' => $isKz ? 'Профиль | TruWork' : 'Профиль | TruWork',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
-    'publish' => $isKz ? 'Жариялау' : 'Опубликовать', 
-    'about' => $isKz ? 'Р‘С–Р· С‚СѓСЂР°Р»С‹' : 'Рћ РЅР°СЃ',
+    'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
-    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
@@ -158,7 +157,9 @@ $t = [
     'skills' => $isKz ? 'Дағдыларды тексеру' : 'Проверка навыков',
     'logout' => $isKz ? 'Шығу' : 'Выйти',
     'heading' => $isKz ? 'Жеке профиль' : 'Личный профиль',
-    'subtitle' => $isKz ? 'Негізгі ақпарат, белсенділік және жеке баптаулар бір бетте.' : 'Основная информация, активность и личные разделы в одном аккуратном интерфейсе.',
+    'subtitle' => $isKz
+        ? 'Негізгі ақпарат, белсенділік және жеке бөлімдер бір бетте.'
+        : 'Основная информация, активность и личные разделы в одном аккуратном интерфейсе.',
     'owner_badge' => $isKz ? 'Бұл сіздің профиліңіз' : 'Это ваш профиль',
     'guest_badge' => $isKz ? 'Қарап шығу режимі' : 'Просмотр профиля',
     'total_views' => $isKz ? '7 күндегі қаралымдар' : 'Просмотры за 7 дней',
@@ -167,16 +168,19 @@ $t = [
     'fullname' => $isKz ? 'Толық аты' : 'Полное имя',
     'email' => 'Email',
     'phone' => $isKz ? 'Телефон' : 'Телефон',
-    'address' => $isKz ? 'Адрес' : 'Адрес',
+    'address' => $isKz ? 'Мекенжай' : 'Адрес',
     'bio' => $isKz ? 'Өзі туралы' : 'О себе',
     'empty' => $isKz ? 'Әлі толтырылмаған' : 'Пока не заполнено',
     'activity' => $isKz ? 'Соңғы 7 күндегі белсенділік' : 'Активность за последние 7 дней',
-    'activity_note' => $isKz ? 'Әр баған профиліңізді қараған адамдар санын көрсетеді.' : 'Каждый столбец показывает количество просмотров профиля за день.',
-    'change_avatar' => $isKz ? 'Аватарды жаңарту' : 'Обновить фото',
-    'upload' => $isKz ? 'Жүктеу' : 'Загрузить',
+    'activity_note' => $isKz
+        ? 'Әр баған профиліңізді қараған адамдар санын көрсетеді.'
+        : 'Каждый столбец показывает количество просмотров профиля за день.',
+    'change_avatar' => $isKz ? 'Фотоны жаңарту' : 'Обновить фото',
     'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
-    'footer_note' => $isKz ? 'Жеке кабинет енді жалпы сайт стилімен толық үйлестірілген.' : 'Личный кабинет теперь полностью совпадает по стилю с остальным сайтом.',
+    'footer_note' => $isKz
+        ? 'Жеке кабинет енді жалпы сайт стилімен толық үйлестірілген.'
+        : 'Личный кабинет теперь полностью совпадает по стилю с остальным сайтом.',
 ];
 
 $paths = [
@@ -186,7 +190,6 @@ $paths = [
     'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
-    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
     'security' => $isKz ? 'security_kk.php' : 'security.php',
@@ -285,7 +288,6 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">

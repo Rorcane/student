@@ -1,66 +1,202 @@
+<?php
+require_once 'config.php';
+
+$lang = $siteLang ?? 'ru';
+$isKz = $lang === 'kk';
+$vacancyId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+if ($vacancyId <= 0) {
+    http_response_code(404);
+    exit($isKz ? 'Вакансия табылмады' : 'Вакансия не найдена');
+}
+
+$stmt = $pdo->prepare("
+    SELECT v.*, c.name AS category_name
+      FROM vacancies v
+ LEFT JOIN categories c ON c.id = v.category_id
+     WHERE v.id = :id
+     LIMIT 1
+");
+$stmt->execute([':id' => $vacancyId]);
+$vacancy = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$vacancy) {
+    http_response_code(404);
+    exit($isKz ? 'Вакансия табылмады' : 'Вакансия не найдена');
+}
+
+$alreadyApplied = false;
+if (isset($_COOKIE['user'])) {
+    try {
+        $checkStmt = $pdo->prepare("
+            SELECT id
+              FROM applications
+             WHERE vacancy_id = :vacancy_id
+               AND applicant = :applicant
+             LIMIT 1
+        ");
+        $checkStmt->execute([
+            ':vacancy_id' => $vacancyId,
+            ':applicant' => (string) $_COOKIE['user'],
+        ]);
+        $alreadyApplied = (bool) $checkStmt->fetchColumn();
+    } catch (Throwable $e) {
+        $alreadyApplied = false;
+    }
+}
+
+$t = [
+    'title' => $isKz ? 'Вакансия туралы толық ақпарат' : 'Подробно о вакансии',
+    'home' => $isKz ? 'Басты бет' : 'Главная',
+    'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
+    'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
+    'about' => $isKz ? 'Біз туралы' : 'О нас',
+    'faq' => 'FAQ',
+    'support' => $isKz ? 'Қолдау' : 'Поддержка',
+    'login' => $isKz ? 'Кіру' : 'Войти',
+    'back' => $isKz ? 'Вакансияларға оралу' : 'Вернуться к вакансиям',
+    'company' => $isKz ? 'Компания' : 'Компания',
+    'category' => $isKz ? 'Санат' : 'Категория',
+    'salary' => $isKz ? 'Жалақы' : 'Зарплата',
+    'location' => $isKz ? 'Орналасқан жері' : 'Местоположение',
+    'description' => $isKz ? 'Сипаттама' : 'Описание',
+    'author' => $isKz ? 'Жариялаған' : 'Опубликовал',
+    'created_at' => $isKz ? 'Жарияланған күні' : 'Дата публикации',
+    'apply' => $isKz ? 'Откликнуться' : 'Откликнуться',
+    'applied' => $isKz ? 'Сіз бұған дейін отклик бергенсіз' : 'Вы уже откликались на эту вакансию',
+    'login_notice' => $isKz ? 'Отклик беру үшін аккаунтқа кіріңіз.' : 'Чтобы откликнуться, войдите в аккаунт.',
+    'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
+    'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+];
+
+$paths = [
+    'index' => $isKz ? 'index_kk.php' : 'index.php',
+    'vacancies' => $isKz ? 'vacancies_kk.php' : 'vacancies.php',
+    'publish' => $isKz ? 'vacancy_kk.php' : 'vacancy.php',
+    'about' => $isKz ? 'about_kk.html' : 'about.html',
+    'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
+    'support' => $isKz ? 'support_kk.html' : 'support.html',
+    'login' => $isKz ? 'login_kk.html' : 'login.html',
+    'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
+    'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
+    'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
+];
+?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $isKz ? 'kk' : 'ru' ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вакансии на рынке ИИ</title>
-		<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-	<link rel="shortcut icon" href="/favicon.ico" />
-	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-	<link rel="manifest" href="/site.webmanifest" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/feather-icons"></script>
+  <title><?= htmlspecialchars((string) $vacancy['title']) ?> | TruWork</title>
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/public-site.css">
 </head>
-<body class="bg-gray-50 text-gray-800">
-  <header class="max-w-4xl mx-auto my-10 text-center px-4">
-    <h1 class="text-4xl font-bold mb-2">Вакансии на основе ИИ</h1>
-    <p class="text-lg text-gray-600">Сортируйте открытые позиции по дате или названию.</p>
+<body>
+  <header class="site-header">
+    <div class="site-shell site-header__inner">
+      <a class="brand" href="<?= htmlspecialchars($paths['index']) ?>"><img src="logo2.png" alt="TruWork"></a>
+      <nav class="site-nav" aria-label="<?= $isKz ? 'Негізгі навигация' : 'Основная навигация' ?>">
+        <a href="<?= htmlspecialchars($paths['index']) ?>"><?= htmlspecialchars($t['home']) ?></a>
+        <a href="<?= htmlspecialchars($paths['vacancies']) ?>" class="is-active"><?= htmlspecialchars($t['vacancies']) ?></a>
+        <a href="<?= htmlspecialchars($paths['publish']) ?>"><?= htmlspecialchars($t['publish']) ?></a>
+        <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
+        <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
+      </nav>
+      <div class="header-actions">
+        <?php if (isset($_COOKIE['user'])): ?>
+          <a class="button-primary" href="<?= htmlspecialchars($paths['profile']) ?>"><?= htmlspecialchars((string) $_COOKIE['user']) ?></a>
+        <?php else: ?>
+          <a class="button-primary" href="<?= htmlspecialchars($paths['login']) ?>"><?= htmlspecialchars($t['login']) ?></a>
+        <?php endif; ?>
+      </div>
+    </div>
   </header>
 
-   <!-- Сортировка -->
-  <div class="max-w-4xl mx-auto px-4 mb-6">
-    <label for="sort" class="font-medium">Сортировать по:</label>
-    <select id="sort" onchange="location.search='?sort='+this.value" class="border rounded p-2 ml-2">
-      <option value="date_posted" <?= \$sort === 'date_posted' ? 'selected' : '' ?>>Дате публикации</option>
-      <option value="title" <?= \$sort === 'title' ? 'selected' : '' ?>>Заголовку</option>
-    </select>
-  </div>
-
-  <!-- Список вакансий -->
-  <section class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 px-4 mb-16">
-    <?php if (empty(\$vacancies)): ?>
-      <p class="text-center col-span-full text-gray-600">Вакансии не найдены.</p>
-    <?php else: foreach (\$vacancies as \$vac): ?>
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-        <div class="mb-4">
-          <i data-feather="briefcase" class="w-8 h-8 text-indigo-600"></i>
+  <main class="page-main">
+    <div class="site-shell grid">
+      <section class="page-card">
+        <div class="stack-actions" style="margin-bottom:18px;">
+          <a class="button-secondary" href="<?= htmlspecialchars($paths['vacancies']) ?>"><?= htmlspecialchars($t['back']) ?></a>
         </div>
-        <h3 class="text-xl font-semibold mb-2"><?= htmlspecialchars(\$vac['title']) ?></h3>
-        <p class="text-gray-600 mb-2"><?= nl2br(htmlspecialchars(\$vac['description'])) ?></p>
-        <p class="text-sm text-gray-500">Дата публикации: <?= htmlspecialchars(\$vac['date_posted']) ?></p>
-      </div>
-    <?php endforeach; endif; ?>
-  </section>
+        <h1 class="section-title" style="margin-bottom:8px;"><?= htmlspecialchars((string) $vacancy['title']) ?></h1>
+        <p class="section-subtitle" style="margin-bottom:0;"><?= htmlspecialchars((string) ($vacancy['company'] ?? '')) ?></p>
+      </section>
 
-  <footer class="bg-white py-8">
-    <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 px-4 gap-6">
+      <section class="page-card">
+        <div class="stat-grid">
+          <article class="stat-card">
+            <strong><?= htmlspecialchars($t['salary']) ?></strong>
+            <span><?= htmlspecialchars((string) ($vacancy['salary'] ?? 'Не указана')) ?></span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars($t['location']) ?></strong>
+            <span><?= htmlspecialchars((string) ($vacancy['location'] ?? 'Не указано')) ?></span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars($t['category']) ?></strong>
+            <span><?= htmlspecialchars((string) ($vacancy['category_name'] ?? 'Без категории')) ?></span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars($t['created_at']) ?></strong>
+            <span><?= htmlspecialchars((string) ($vacancy['created_at'] ?? '')) ?></span>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <h2 class="section-title" style="font-size:28px;"><?= htmlspecialchars($t['description']) ?></h2>
+        <div class="section-subtitle" style="white-space:pre-line;color:#334155;"><?= htmlspecialchars((string) ($vacancy['description'] ?? '')) ?></div>
+      </section>
+
+      <section class="page-card">
+        <div class="grid grid-2">
+          <article class="info-card">
+            <h3><?= htmlspecialchars($t['company']) ?></h3>
+            <p><?= htmlspecialchars((string) ($vacancy['company'] ?? '')) ?></p>
+          </article>
+          <article class="info-card">
+            <h3><?= htmlspecialchars($t['author']) ?></h3>
+            <p><?= htmlspecialchars((string) ($vacancy['author'] ?? 'TruWork')) ?></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <?php if (isset($_COOKIE['user'])): ?>
+          <?php if ($alreadyApplied): ?>
+            <div class="alert alert-info"><?= htmlspecialchars($t['applied']) ?></div>
+          <?php else: ?>
+            <form method="post" action="process_application.php" class="stack-actions">
+              <input type="hidden" name="vacancy_id" value="<?= (int) $vacancy['id'] ?>">
+              <button class="button-primary" type="submit"><?= htmlspecialchars($t['apply']) ?></button>
+            </form>
+          <?php endif; ?>
+        <?php else: ?>
+          <div class="alert alert-info"><?= htmlspecialchars($t['login_notice']) ?></div>
+        <?php endif; ?>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-shell site-footer__panel">
       <div>
-        <h4 class="font-semibold mb-2">Свяжитесь с нами</h4>
-        <p>Эл. почта: <a href="mailto:info@example.com" class="text-indigo-600">info@example.com</a></p>
-        <p>Телефон: <a href="tel:+1234567890" class="text-indigo-600">+1 234 567 890</a></p>
+        <strong>TruWork</strong>
       </div>
-      <div>
-        <h4 class="font-semibold mb-2">Быстрые ссылки</h4>
-        <ul class="space-y-1">
-          <li><a href="#" class="hover:text-indigo-600">Политика</a></li>
-          <li><a href="#" class="hover:text-indigo-600">Условия</a></li>
-          <li><a href="#" class="hover:text-indigo-600">Поддержка</a></li>
-        </ul>
+      <div class="footer-links">
+        <a href="<?= htmlspecialchars($paths['policy']) ?>"><?= htmlspecialchars($t['policy']) ?></a>
+        <a href="<?= htmlspecialchars($paths['terms']) ?>"><?= htmlspecialchars($t['terms']) ?></a>
+        <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
       </div>
     </div>
   </footer>
-
-  <script>feather.replace();</script>
 </body>
 </html>

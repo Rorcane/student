@@ -215,6 +215,11 @@ function page_link(int $page, array $params): string
       <section class="page-card">
         <h1 class="section-title"><?= htmlspecialchars($t['title']) ?></h1>
         <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+        <div class="stack-actions" style="margin-bottom:18px;">
+          <a class="button-secondary" href="<?= $isKz ? 'smart_search_kk.php' : 'smart_search.php' ?>">
+            <?= $isKz ? 'Ақылды іздеуге өту' : 'Перейти в умный поиск' ?>
+          </a>
+        </div>
 
         <form method="get" class="form-grid">
           <div>

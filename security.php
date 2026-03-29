@@ -87,7 +87,6 @@ $t = [
     'about' => $isKz ? 'Біз туралы' : 'О нас',
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
-    'smart_search' => $isKz ? 'Ақылды іздеу' : 'Умный поиск',
     'profile' => $isKz ? 'Профиль' : 'Профиль',
     'settings' => $isKz ? 'Баптаулар' : 'Настройки',
     'security' => $isKz ? 'Қауіпсіздік' : 'Безопасность',
@@ -122,7 +121,6 @@ $paths = [
     'about' => $isKz ? 'about_kk.html' : 'about.html',
     'faq' => $isKz ? 'faq_kk.html' : 'faq.html',
     'support' => $isKz ? 'support_kk.html' : 'support.html',
-    'smart_search' => $isKz ? 'smart_search_kk.php' : 'smart_search.php',
     'profile' => $isKz ? 'profile_kk.php' : 'profile.php',
     'settings' => $isKz ? 'settings_kk.php' : 'settings.php',
     'security' => $isKz ? 'security_kk.php' : 'security.php',
@@ -158,7 +156,6 @@ $paths = [
         <a href="<?= htmlspecialchars($paths['about']) ?>"><?= htmlspecialchars($t['about']) ?></a>
         <a href="<?= htmlspecialchars($paths['faq']) ?>"><?= htmlspecialchars($t['faq']) ?></a>
         <a href="<?= htmlspecialchars($paths['support']) ?>"><?= htmlspecialchars($t['support']) ?></a>
-        <a href="<?= htmlspecialchars($paths['smart_search']) ?>"><?= htmlspecialchars($t['smart_search']) ?></a>
       </nav>
       <div class="header-actions">
         <div class="lang-switch">
