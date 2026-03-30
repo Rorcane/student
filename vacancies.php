@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once 'hh_jobs.php';
 
 function plural_form(int $n, array $forms): string
 {
@@ -17,6 +18,21 @@ function plural_form(int $n, array $forms): string
     return $forms[2];
 }
 
+function page_link(int $page, array $params): string
+{
+    $params['page'] = $page;
+    return '?' . http_build_query($params);
+}
+
+function vacancy_detail_link(array $vacancy): string
+{
+    if (($vacancy['source'] ?? 'internal') === 'hh') {
+        return 'search.php?source=hh&id=' . (int) ($vacancy['id'] ?? 0);
+    }
+
+    return 'search.php?id=' . (int) ($vacancy['id'] ?? 0);
+}
+
 $lang = $siteLang ?? 'ru';
 $isKz = $lang === 'kk';
 
@@ -29,62 +45,163 @@ $limit = 15;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
-$categoriesStmt = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC");
+$categoriesStmt = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC');
 $categories = $categoriesStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$orderBy = 'v.created_at DESC';
-if ($sort === 'oldest') {
-    $orderBy = 'v.created_at ASC';
-} elseif ($sort === 'company') {
-    $orderBy = 'v.company ASC';
-} elseif ($sort === 'title') {
-    $orderBy = 'v.title ASC';
+$hhSyncError = null;
+$hhQueries = $titleFilter !== ''
+    ? [$titleFilter]
+    : ['php', 'backend developer', 'frontend developer'];
+
+try {
+    syncHeadHunterVacancies($pdo, $hhQueries, 1);
+} catch (Throwable $e) {
+    $hhSyncError = $e->getMessage();
+    error_log('[HH Sync] ' . $e->getMessage());
 }
 
-$conditions = [];
-$params = [];
+$hasJobsTable = hhJobsTableExists($pdo);
+
+$sortMap = [
+    'newest' => 'created_at DESC',
+    'oldest' => 'created_at ASC',
+    'company' => 'company ASC',
+    'title' => 'title ASC',
+];
+$unionOrderBy = $sortMap[$sort] ?? $sortMap['newest'];
+
+$internalConditions = [];
+$internalParams = [];
+$hhConditions = [];
+$hhParams = [];
 
 if ($titleFilter !== '') {
-    $conditions[] = 'v.title LIKE :title';
-    $params[':title'] = '%' . $titleFilter . '%';
-}
-if ($companyFilter !== '') {
-    $conditions[] = 'v.company LIKE :company';
-    $params[':company'] = '%' . $companyFilter . '%';
-}
-if ($categoryFilter !== '') {
-    $conditions[] = 'v.category_id = :category';
-    $params[':category'] = $categoryFilter;
+    $internalConditions[] = 'v.title LIKE :title';
+    $internalParams[':title'] = '%' . $titleFilter . '%';
+
+    if ($hasJobsTable) {
+        $hhConditions[] = 'j.title LIKE :title';
+        $hhParams[':title'] = '%' . $titleFilter . '%';
+    }
 }
 
-$whereSql = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+if ($companyFilter !== '') {
+    $internalConditions[] = 'v.company LIKE :company';
+    $internalParams[':company'] = '%' . $companyFilter . '%';
+
+    if ($hasJobsTable) {
+        $hhConditions[] = 'j.company LIKE :company';
+        $hhParams[':company'] = '%' . $companyFilter . '%';
+    }
+}
+
+if ($categoryFilter !== '') {
+    $internalConditions[] = 'v.category_id = :category';
+    $internalParams[':category'] = $categoryFilter;
+
+    if ($hasJobsTable) {
+        $hhConditions[] = '1 = 0';
+    }
+}
+
+$internalWhereSql = $internalConditions ? 'WHERE ' . implode(' AND ', $internalConditions) : '';
+$hhWhereSql = $hhConditions ? 'WHERE ' . implode(' AND ', $hhConditions) : '';
+$hhSelectSql = '';
+$hhCountSql = '';
+
+if ($hasJobsTable) {
+    $hhSelectSql = "
+            UNION ALL
+
+            SELECT
+                j.id,
+                CONVERT(j.external_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AS external_id,
+                CONVERT(j.title USING utf8mb4) COLLATE utf8mb4_unicode_ci AS title,
+                CONVERT(j.company USING utf8mb4) COLLATE utf8mb4_unicode_ci AS company,
+                CONVERT(j.salary USING utf8mb4) COLLATE utf8mb4_unicode_ci AS salary,
+                CONVERT(j.city USING utf8mb4) COLLATE utf8mb4_unicode_ci AS city,
+                CONVERT(j.description USING utf8mb4) COLLATE utf8mb4_unicode_ci AS description,
+                CONVERT(j.url USING utf8mb4) COLLATE utf8mb4_unicode_ci AS url,
+                CONVERT(j.source USING utf8mb4) COLLATE utf8mb4_unicode_ci AS source,
+                j.created_at,
+                CAST('HeadHunter' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci AS category_name
+            FROM jobs j
+            {$hhWhereSql}
+    ";
+
+    $hhCountSql = "
+            UNION ALL
+
+            SELECT j.id
+            FROM jobs j
+            {$hhWhereSql}
+    ";
+}
 
 $sql = "
-    SELECT v.*, c.name AS category_name
-      FROM vacancies v
- LEFT JOIN categories c ON c.id = v.category_id
-    {$whereSql}
-  ORDER BY {$orderBy}
-     LIMIT {$limit}
-    OFFSET {$offset}
+    SELECT *
+      FROM (
+            SELECT
+                v.id,
+                NULL AS external_id,
+                CONVERT(v.title USING utf8mb4) COLLATE utf8mb4_unicode_ci AS title,
+                CONVERT(v.company USING utf8mb4) COLLATE utf8mb4_unicode_ci AS company,
+                CONVERT(v.salary USING utf8mb4) COLLATE utf8mb4_unicode_ci AS salary,
+                CONVERT(v.location USING utf8mb4) COLLATE utf8mb4_unicode_ci AS city,
+                CONVERT(v.description USING utf8mb4) COLLATE utf8mb4_unicode_ci AS description,
+                NULL AS url,
+                CAST('internal' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci AS source,
+                v.created_at,
+                CONVERT(COALESCE(c.name, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS category_name
+            FROM vacancies v
+            LEFT JOIN categories c ON c.id = v.category_id
+            {$internalWhereSql}
+            {$hhSelectSql}
+      ) AS combined_vacancies
+  ORDER BY {$unionOrderBy}
+     LIMIT :limit
+    OFFSET :offset
 ";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+foreach ($internalParams as $key => $value) {
+    $stmt->bindValue($key, $value, PDO::PARAM_STR);
+}
+foreach ($hhParams as $key => $value) {
+    if (!array_key_exists($key, $internalParams)) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+}
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $countSql = "
     SELECT COUNT(*)
-      FROM vacancies v
-    {$whereSql}
+      FROM (
+            SELECT v.id
+            FROM vacancies v
+            {$internalWhereSql}
+            {$hhCountSql}
+      ) AS combined_count
 ";
+
 $countStmt = $pdo->prepare($countSql);
-$countStmt->execute($params);
+foreach ($internalParams as $key => $value) {
+    $countStmt->bindValue($key, $value, PDO::PARAM_STR);
+}
+foreach ($hhParams as $key => $value) {
+    if (!array_key_exists($key, $internalParams)) {
+        $countStmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+}
+$countStmt->execute();
 $totalVacancies = (int) $countStmt->fetchColumn();
 $totalPages = max(1, (int) ceil($totalVacancies / $limit));
 
 $t = [
-    'page_title' => $isKz ? 'TruWork - вакансиялар' : 'TruWork - вакансии',
+    'page_title' => $isKz ? 'TruWork - Вакансиялар' : 'TruWork - Вакансии',
     'home' => $isKz ? 'Басты бет' : 'Главная',
     'vacancies' => $isKz ? 'Вакансиялар' : 'Вакансии',
     'publish' => $isKz ? 'Жариялау' : 'Опубликовать',
@@ -92,8 +209,13 @@ $t = [
     'faq' => 'FAQ',
     'support' => $isKz ? 'Қолдау' : 'Поддержка',
     'login' => $isKz ? 'Кіру' : 'Войти',
-    'title' => $isKz ? 'Жаңа вакансияларды табу' : 'Найти актуальные вакансии',
-    'subtitle' => $isKz ? 'Іздеу, компания және санат бойынша сүзгілеп, жаңа ұсыныстарды HH стиліне жақын карточкаларда қараңыз.' : 'Фильтруйте по названию, компании и категории и просматривайте свежие вакансии в более реалистичных карточках.',
+    'title' => $isKz ? 'Өзекті вакансияларды табу' : 'Найти актуальные вакансии',
+    'subtitle' => $isKz
+        ? 'Сайттағы және HeadHunter-тен жүктелген вакансияларды бір таспада қарап, сүзгілер арқылы тез табыңыз.'
+        : 'Просматривайте вакансии сайта и HeadHunter в одной общей ленте с единым стилем и удобными фильтрами.',
+    'hh_sync_warning' => $isKz
+        ? 'HeadHunter вакансияларын жаңарту уақытша қолжетімсіз. Сайттағы вакансиялар көрсетілді.'
+        : 'Временное обновление вакансий HeadHunter недоступно. Показаны вакансии сайта.',
     'title_placeholder' => $isKz ? 'Лауазым атауы' : 'Название должности',
     'company_placeholder' => $isKz ? 'Компания' : 'Компания',
     'all_categories' => $isKz ? 'Барлық санаттар' : 'Все категории',
@@ -110,11 +232,21 @@ $t = [
     'salary' => $isKz ? 'Жалақы' : 'Зарплата',
     'location' => $isKz ? 'Орналасқан жері' : 'Местоположение',
     'details' => $isKz ? 'Толығырақ' : 'Подробнее',
+    'details_hh' => $isKz ? 'Толығырақ' : 'Подробнее',
     'empty' => $isKz ? 'Сұраныс бойынша вакансия табылмады.' : 'По вашему запросу вакансии не найдены.',
     'page' => $isKz ? 'Бет' : 'Страница',
     'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
-    'footer_note' => $isKz ? 'Жаңа әрі шынайырақ көрінетін вакансиялар таспасы.' : 'Лента вакансий в более реалистичном стиле с упором на новые предложения.',
+    'footer_note' => $isKz
+        ? 'Сайт және HeadHunter көздерінен жиналған вакансиялар таспасы.'
+        : 'Единая лента вакансий из сайта и HeadHunter в общем визуальном стиле.',
+    'source' => $isKz ? 'Дереккөз' : 'Источник',
+    'source_internal' => $isKz ? 'Сайт' : 'Сайт',
+    'source_hh' => 'HeadHunter',
+    'category_none' => $isKz ? 'Санат көрсетілмеген' : 'Без категории',
+    'salary_empty' => $isKz ? 'Көрсетілмеген' : 'Не указано',
+    'location_empty' => $isKz ? 'Көрсетілмеген' : 'Не указано',
+    'smart_search' => $isKz ? 'Ақылды іздеуге өту' : 'Перейти в умный поиск',
 ];
 
 $paths = [
@@ -128,12 +260,6 @@ $paths = [
     'policy' => $isKz ? 'policy_kk.html' : 'policy.html',
     'terms' => $isKz ? 'terms_kk.html' : 'terms.html',
 ];
-
-function page_link(int $page, array $params): string
-{
-    $params['page'] = $page;
-    return '?' . http_build_query($params);
-}
 ?>
 <!DOCTYPE html>
 <html lang="<?= $isKz ? 'kk' : 'ru' ?>">
@@ -215,9 +341,12 @@ function page_link(int $page, array $params): string
       <section class="page-card">
         <h1 class="section-title"><?= htmlspecialchars($t['title']) ?></h1>
         <p class="section-subtitle"><?= htmlspecialchars($t['subtitle']) ?></p>
+        <?php if ($hhSyncError !== null): ?>
+          <p class="section-subtitle" style="margin-top:12px; color:#b42318;"><?= htmlspecialchars($t['hh_sync_warning']) ?></p>
+        <?php endif; ?>
         <div class="stack-actions" style="margin-bottom:18px;">
           <a class="button-secondary" href="<?= $isKz ? 'smart_search_kk.php' : 'smart_search.php' ?>">
-            <?= $isKz ? 'Ақылды іздеуге өту' : 'Перейти в умный поиск' ?>
+            <?= htmlspecialchars($t['smart_search']) ?>
           </a>
         </div>
 
@@ -271,16 +400,20 @@ function page_link(int $page, array $params): string
                 <h2 style="margin:0 0 8px;"><?= htmlspecialchars((string) ($vacancy['title'] ?? '')) ?></h2>
                 <div class="muted"><?= htmlspecialchars((string) ($vacancy['company'] ?? '')) ?></div>
                 <div class="vacancy-meta">
-                  <span class="vacancy-chip"><?= htmlspecialchars($t['salary']) ?>: <?= htmlspecialchars((string) ($vacancy['salary'] ?? 'Не указана')) ?></span>
-                  <span class="vacancy-chip"><?= htmlspecialchars($t['location']) ?>: <?= htmlspecialchars((string) ($vacancy['location'] ?? 'Не указано')) ?></span>
-                  <span class="vacancy-chip"><?= htmlspecialchars($t['category']) ?>: <?= htmlspecialchars((string) ($vacancy['category_name'] ?? 'Без категории')) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['salary']) ?>: <?= htmlspecialchars((string) ($vacancy['salary'] ?? $t['salary_empty'])) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['location']) ?>: <?= htmlspecialchars((string) ($vacancy['city'] ?? $t['location_empty'])) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['category']) ?>: <?= htmlspecialchars((string) ($vacancy['category_name'] ?? $t['category_none'])) ?></span>
+                  <span class="vacancy-chip"><?= htmlspecialchars($t['source']) ?>: <?= htmlspecialchars(($vacancy['source'] ?? 'internal') === 'hh' ? $t['source_hh'] : $t['source_internal']) ?></span>
                 </div>
                 <p class="muted" style="margin:0;">
                   <?= htmlspecialchars(mb_strlen((string) ($vacancy['description'] ?? '')) > 260 ? mb_substr((string) $vacancy['description'], 0, 260) . '...' : (string) ($vacancy['description'] ?? '')) ?>
                 </p>
               </div>
               <div class="dashboard-hero__actions">
-                <a class="button-primary" href="search.php?id=<?= (int) $vacancy['id'] ?>"><?= htmlspecialchars($t['details']) ?></a>
+                <a
+                  class="button-primary"
+                  href="<?= htmlspecialchars(vacancy_detail_link($vacancy)) ?>"
+                ><?= htmlspecialchars(($vacancy['source'] ?? 'internal') === 'hh' ? $t['details_hh'] : $t['details']) ?></a>
               </div>
             </div>
           </section>

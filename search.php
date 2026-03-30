@@ -1,24 +1,55 @@
 <?php
 require_once 'config.php';
+require_once 'hh_jobs.php';
 
 $lang = $siteLang ?? 'ru';
 $isKz = $lang === 'kk';
 $vacancyId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$source = trim((string) ($_GET['source'] ?? 'internal'));
+$isHhVacancy = $source === 'hh';
 
 if ($vacancyId <= 0) {
     http_response_code(404);
     exit($isKz ? 'Вакансия табылмады' : 'Вакансия не найдена');
 }
 
-$stmt = $pdo->prepare("
-    SELECT v.*, c.name AS category_name
-      FROM vacancies v
- LEFT JOIN categories c ON c.id = v.category_id
-     WHERE v.id = :id
-     LIMIT 1
-");
-$stmt->execute([':id' => $vacancyId]);
-$vacancy = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($isHhVacancy) {
+    if (!hhJobsTableExists($pdo)) {
+        http_response_code(404);
+        exit($isKz ? 'Вакансия табылмады' : 'Вакансия не найдена');
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            j.id,
+            j.external_id,
+            j.title,
+            j.company,
+            j.salary,
+            j.city AS location,
+            j.description,
+            j.url,
+            j.source,
+            j.created_at,
+            'HeadHunter' AS category_name,
+            'TruWork Import' AS author
+        FROM jobs j
+        WHERE j.id = :id
+        LIMIT 1
+    ");
+    $stmt->execute([':id' => $vacancyId]);
+    $vacancy = $stmt->fetch(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $pdo->prepare("
+        SELECT v.*, c.name AS category_name
+          FROM vacancies v
+     LEFT JOIN categories c ON c.id = v.category_id
+         WHERE v.id = :id
+         LIMIT 1
+    ");
+    $stmt->execute([':id' => $vacancyId]);
+    $vacancy = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
 if (!$vacancy) {
     http_response_code(404);
@@ -26,7 +57,15 @@ if (!$vacancy) {
 }
 
 $alreadyApplied = false;
-if (isset($_COOKIE['user'])) {
+if ($isHhVacancy && isset($_COOKIE['user'])) {
+    try {
+        $alreadyApplied = hasAppliedToHhVacancy($pdo, $vacancyId, (string) $_COOKIE['user']);
+    } catch (Throwable $e) {
+        $alreadyApplied = false;
+    }
+}
+
+if (!$isHhVacancy && isset($_COOKIE['user'])) {
     try {
         $checkStmt = $pdo->prepare("
             SELECT id
@@ -65,8 +104,17 @@ $t = [
     'apply' => $isKz ? 'Откликнуться' : 'Откликнуться',
     'applied' => $isKz ? 'Сіз бұған дейін отклик бергенсіз' : 'Вы уже откликались на эту вакансию',
     'login_notice' => $isKz ? 'Отклик беру үшін аккаунтқа кіріңіз.' : 'Чтобы откликнуться, войдите в аккаунт.',
+    'hh_notice' => $isKz
+        ? 'Бұл вакансия сыртқы дереккөзден импортталған және TruWork ішінде толық карточка ретінде көрсетіліп тұр.'
+        : 'Эта вакансия импортирована из внешнего источника и отображается внутри TruWork как полная карточка.',
     'policy' => $isKz ? 'Құпиялық саясаты' : 'Политика конфиденциальности',
     'terms' => $isKz ? 'Пайдалану шарттары' : 'Условия использования',
+    'source' => $isKz ? 'Дереккөз' : 'Источник',
+    'source_internal' => $isKz ? 'Сайт' : 'Сайт',
+    'source_hh' => 'HeadHunter',
+    'salary_empty' => $isKz ? 'Көрсетілмеген' : 'Не указано',
+    'location_empty' => $isKz ? 'Көрсетілмеген' : 'Не указано',
+    'category_none' => $isKz ? 'Санат көрсетілмеген' : 'Без категории',
 ];
 
 $paths = [
@@ -128,21 +176,28 @@ $paths = [
         </div>
         <h1 class="section-title" style="margin-bottom:8px;"><?= htmlspecialchars((string) $vacancy['title']) ?></h1>
         <p class="section-subtitle" style="margin-bottom:0;"><?= htmlspecialchars((string) ($vacancy['company'] ?? '')) ?></p>
+        <?php if ($isHhVacancy): ?>
+          <p class="section-subtitle" style="margin-top:14px; color:#475467;"><?= htmlspecialchars($t['hh_notice']) ?></p>
+        <?php endif; ?>
       </section>
 
       <section class="page-card">
         <div class="stat-grid">
           <article class="stat-card">
             <strong><?= htmlspecialchars($t['salary']) ?></strong>
-            <span><?= htmlspecialchars((string) ($vacancy['salary'] ?? 'Не указана')) ?></span>
+            <span><?= htmlspecialchars((string) ($vacancy['salary'] ?? $t['salary_empty'])) ?></span>
           </article>
           <article class="stat-card">
             <strong><?= htmlspecialchars($t['location']) ?></strong>
-            <span><?= htmlspecialchars((string) ($vacancy['location'] ?? 'Не указано')) ?></span>
+            <span><?= htmlspecialchars((string) ($vacancy['location'] ?? $t['location_empty'])) ?></span>
           </article>
           <article class="stat-card">
             <strong><?= htmlspecialchars($t['category']) ?></strong>
-            <span><?= htmlspecialchars((string) ($vacancy['category_name'] ?? 'Без категории')) ?></span>
+            <span><?= htmlspecialchars((string) ($vacancy['category_name'] ?? $t['category_none'])) ?></span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars($t['source']) ?></strong>
+            <span><?= htmlspecialchars($isHhVacancy ? $t['source_hh'] : $t['source_internal']) ?></span>
           </article>
           <article class="stat-card">
             <strong><?= htmlspecialchars($t['created_at']) ?></strong>
@@ -176,6 +231,7 @@ $paths = [
           <?php else: ?>
             <form method="post" action="process_application.php" class="stack-actions">
               <input type="hidden" name="vacancy_id" value="<?= (int) $vacancy['id'] ?>">
+              <input type="hidden" name="source" value="<?= htmlspecialchars($isHhVacancy ? 'hh' : 'internal') ?>">
               <button class="button-primary" type="submit"><?= htmlspecialchars($t['apply']) ?></button>
             </form>
           <?php endif; ?>

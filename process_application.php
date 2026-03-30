@@ -1,40 +1,52 @@
 <?php
-// process_application.php
 require_once 'config.php';
+require_once 'hh_jobs.php';
 
 if (!isset($_COOKIE['user'])) {
     header('Location: login.html');
     exit();
 }
 
-$applicant  = $_COOKIE['user'];
-$vacancy_id = isset($_POST['vacancy_id']) ? (int)$_POST['vacancy_id'] : 0;
+$applicant = (string) $_COOKIE['user'];
+$vacancyId = isset($_POST['vacancy_id']) ? (int) $_POST['vacancy_id'] : 0;
+$source = isset($_POST['source']) ? trim((string) $_POST['source']) : 'internal';
 
-if ($vacancy_id > 0) {
-    // 1) Вставляем отклик
-    $ins = $pdo->prepare("
-        INSERT INTO applications (vacancy_id, applicant, created_at)
-        VALUES (:vid, :app, NOW())
-    ");
+if ($vacancyId > 0) {
+    if ($source === 'hh') {
+        ensureHhApplicationsTable($pdo);
+
+        $stmt = $pdo->prepare(
+            'INSERT IGNORE INTO hh_applications (job_id, applicant, created_at)
+             VALUES (:job_id, :applicant, NOW())'
+        );
+        $stmt->execute([
+            ':job_id' => $vacancyId,
+            ':applicant' => $applicant,
+        ]);
+
+        header('Location: my_applications.php');
+        exit();
+    }
+
+    $ins = $pdo->prepare(
+        'INSERT INTO applications (vacancy_id, applicant, created_at)
+         VALUES (:vid, :app, NOW())'
+    );
     $ins->execute([
-        ':vid' => $vacancy_id,
+        ':vid' => $vacancyId,
         ':app' => $applicant,
     ]);
 
-    // 2) Узнаём автора вакансии
-    $uStmt = $pdo->prepare("SELECT author FROM vacancies WHERE id = ?");
-    $uStmt->execute([$vacancy_id]);
+    $uStmt = $pdo->prepare('SELECT author FROM vacancies WHERE id = ?');
+    $uStmt->execute([$vacancyId]);
     $author = $uStmt->fetchColumn();
 
     if ($author) {
-        // 3) Редирект в чат с передачей vacancy_id
-        $url = 'chat.php?with=' . urlencode($author)
-             . '&vacancy=' . $vacancy_id;
+        $url = 'chat.php?with=' . urlencode((string) $author) . '&vacancy=' . $vacancyId;
         header('Location: ' . $url);
         exit();
     }
 }
 
-// Если что-то пошло не так — возвращаем на страницу с вакансиями
 header('Location: vacancies.php');
 exit();
