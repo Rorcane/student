@@ -18,8 +18,8 @@ $stmt = $pdo->prepare("
       a.id,
       a.vacancy_id AS item_id,
       a.created_at AS applied_at,
-      v.title AS vacancy_title,
-      v.author AS vacancy_author,
+      CONVERT(v.title USING utf8mb4) COLLATE utf8mb4_unicode_ci AS vacancy_title,
+      CONVERT(v.author USING utf8mb4) COLLATE utf8mb4_unicode_ci AS vacancy_author,
       'internal' AS source
     FROM applications a
     JOIN vacancies v ON a.vacancy_id = v.id
@@ -31,8 +31,8 @@ $stmt = $pdo->prepare("
       ha.id,
       ha.job_id AS item_id,
       ha.created_at AS applied_at,
-      j.title AS vacancy_title,
-      j.company AS vacancy_author,
+      CONVERT(j.title USING utf8mb4) COLLATE utf8mb4_unicode_ci AS vacancy_title,
+      CONVERT(j.company USING utf8mb4) COLLATE utf8mb4_unicode_ci AS vacancy_author,
       'hh' AS source
     FROM hh_applications ha
     JOIN jobs j ON ha.job_id = j.id
